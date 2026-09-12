@@ -43,9 +43,15 @@ pytest -q -o addopts= tests
 
 Tests are offline: they use an injected fake runner and a temporary manifest, never the weights.
 
+## Tutorials
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/ast-audio-classification-pipeline/blob/main/tutorials/ast_audio_classification_colab.ipynb)
+
+`tutorials/ast_audio_classification_colab.ipynb` is declared `TASK-INFERENCE` under DIMER Notebook Specification 1.0. Its default path generates a 3 s, 440 Hz sine tone in code at 16 kHz (no download, no ground truth), surfaces the pipeline ceilings, resolves the pinned model through the public API, ranks the 527 AudioSet labels by independent sigmoid score (uncalibrated, no shipped threshold), reports no metric (none is shipped and no labelled audio exists), and exports JSON plus a rank-ordered CSV. BYOD (one PCM WAV file) is optional and gated off by default. See `tutorials/README.md` for the registry and `docs/release-verification.md` for the release gate.
+
 ## Release status
 
-**Candidate / source-complete** (`STATUS.md`). Card pass only; no tutorial notebook yet.
+**Candidate.** Static/unit checks do not constitute clean-runtime notebook evidence. The clean-runtime run of the tutorial is pending; complete `docs/release-verification.md` against the exact release revision before calling the notebook release-grade.
 
 ## Licensing
 
