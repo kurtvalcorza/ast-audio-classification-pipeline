@@ -9,6 +9,7 @@ from .pipeline import (
     NUM_LABELS,
     SAMPLE_RATE,
     ASTAudioClassificationPipeline,
+    stage_missing_files,
     verify_snapshot,
 )
 
@@ -23,5 +24,6 @@ __all__ = [
     "NUM_LABELS",
     "SAMPLE_RATE",
     "ASTAudioClassificationPipeline",
+    "stage_missing_files",
     "verify_snapshot",
 ]

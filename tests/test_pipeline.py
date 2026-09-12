@@ -1,3 +1,4 @@
+import hashlib
 import json
 import re
 from pathlib import Path
@@ -15,6 +16,7 @@ from ast_audio_classification_pipeline import (
     NUM_LABELS,
     SAMPLE_RATE,
     ASTAudioClassificationPipeline,
+    stage_missing_files,
     verify_snapshot,
 )
 
@@ -151,3 +153,38 @@ def test_predict_resamples_when_rate_differs():
     assert len(calls) == 1
     assert abs(calls[0].shape[0] - SAMPLE_RATE) <= 1  # 1 s at 8 kHz became ~16000 samples
     assert calls[0].dtype == np.float32
+
+
+def test_stage_missing_files_fetches_only_absent_entries_then_verifies(tmp_path):
+    """Fresh-clone shape: manifest committed, weight file absent. allow_download fetches exactly that file."""
+    payload = b"weights-bytes"
+    (tmp_path / "config.json").write_bytes(b"{}")
+    manifest = {
+        "modelId": MODEL_ID,
+        "revision": MODEL_REVISION,
+        "files": [
+            {"path": "config.json", "bytes": 2, "sha256": hashlib.sha256(b"{}").hexdigest()},
+            {"path": "model.bin", "bytes": len(payload), "sha256": hashlib.sha256(payload).hexdigest()},
+        ],
+    }
+    (tmp_path / "dimer-base-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(FileNotFoundError, match="allow_download=True"):
+        stage_missing_files(tmp_path)
+    fetched = []
+
+    def fake_download(relative_path, root):
+        fetched.append(relative_path)
+        (root / relative_path).write_bytes(payload)
+
+    assert stage_missing_files(tmp_path, allow_download=True, downloader=fake_download) == ["model.bin"]
+    assert fetched == ["model.bin"]
+    listed = verify_snapshot(tmp_path)["files"]
+    assert (listed if isinstance(listed, int) else len(listed)) == 2
+    assert stage_missing_files(tmp_path, allow_download=True, downloader=fake_download) == []
+
+
+def test_stage_missing_files_refuses_foreign_manifest(tmp_path):
+    manifest = {"modelId": "someone/else", "revision": MODEL_REVISION, "files": []}
+    (tmp_path / "dimer-base-manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ValueError, match="refusing to stage"):
+        stage_missing_files(tmp_path, allow_download=True, downloader=lambda *_: None)
