@@ -1,16 +1,32 @@
 ---
 license: bsd-3-clause
-model_card_spec: "1.0"
+model_card_spec: "1.1"
 pipeline_tag: audio-classification
 base_model: MIT/ast-finetuned-audioset-10-10-0.4593
 ---
 
-# Audio Spectrogram Transformer, AudioSet fine-tune (DIMER package v0.1.0)
+# Audio Spectrogram Transformer, AudioSet fine-tune (DIMER package v0.1.0) — Audio Event Classification
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-MIT%2Fast--finetuned--audioset--10--10--0.4593-ffcc4d?style=flat)](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593)
-[![GitHub](https://img.shields.io/badge/GitHub-YuanGongND%2Fast-181717?style=flat&logo=github&logoColor=white)](https://github.com/YuanGongND/ast)
-[![arXiv](https://img.shields.io/badge/arXiv-2104.01778-b31b1b.svg)](https://arxiv.org/abs/2104.01778)
+[![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-YuanGongND%2Fast-181717?style=flat&logo=github&logoColor=white)](https://github.com/YuanGongND/ast)
+[![arXiv Paper](https://img.shields.io/badge/arXiv-2104.01778-b31b1b.svg)](https://arxiv.org/abs/2104.01778)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Pipeline](https://img.shields.io/badge/Pipeline-ast--audio--classification--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/ast-audio-classification-pipeline)
+
+> [!WARNING]
+> ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
+
+---
+
+## Interactive Colab Tutorials
+
+This pipeline provides a ready-to-run interactive Google Colab notebook that exercises the repository's public API end to end — bootstrap a fresh runtime, resolve and verify the pinned upstream revision, validate an input, run the task, and inspect and export the outputs:
+
+- **Task Inference Tutorial**:  
+  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/ast-audio-classification-pipeline/blob/main/tutorials/ast_audio_classification_colab.ipynb) [`ast_audio_classification_colab.ipynb`](https://github.com/kurtvalcorza/ast-audio-classification-pipeline/blob/main/tutorials/ast_audio_classification_colab.ipynb)  
+  *Multi-label audio event classification over the 527 AudioSet labels with the pinned `MIT/ast-finetuned-audioset-10-10-0.4593` weights: 16 kHz waveform → 128-bin filterbank → one logit per label; no adaptation occurs.*
+
+---
 
 ###### Description
 
