@@ -246,10 +246,6 @@ class ASTAudioClassificationPipeline:
         weights_dir: str | Path | None = None,
         allow_download: bool = False,
     ) -> ASTAudioClassificationPipeline:
-        import torch
-        from transformers import ASTFeatureExtractor, ASTForAudioClassification
-
-        resolved_device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         root = Path(weights_dir) if weights_dir is not None else DEFAULT_WEIGHTS_DIR
         if (root / MANIFEST_NAME).is_file():
             stage_missing_files(root, allow_download=allow_download)
@@ -259,6 +255,11 @@ class ASTAudioClassificationPipeline:
             source, kwargs = MODEL_ID, dict(revision=MODEL_REVISION)
         else:
             raise FileNotFoundError(f"no verified snapshot at {root} and allow_download=False")
+        # Refuse invalid snapshots before importing model libraries.
+        import torch
+        from transformers import ASTFeatureExtractor, ASTForAudioClassification
+
+        resolved_device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         extractor = ASTFeatureExtractor.from_pretrained(source, trust_remote_code=False, **kwargs)
         model = ASTForAudioClassification.from_pretrained(
             source, trust_remote_code=False, dtype=torch.float32, **kwargs
