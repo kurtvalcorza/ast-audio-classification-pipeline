@@ -30,3 +30,5 @@ and regenerate (`python tools/build_notebook.py`; `--check` is enforced by the v
   clean-runtime execution requirement; a release review must confirm that a recorded clean run in
   `docs/release-verification.md` matches the notebook revision under review before the status is
   promoted to `Release-grade`.
+
+Current source update: snapshot validation now runs before model-library imports (repair `fe0d775`, reviewer finding AST-001), so rejected requests fail with the intended validation error even when model libraries are absent. The standalone notebook was regenerated from this source (`b0bcd08`). The retained 2026-09-13 GPU run identifies the earlier notebook blob at `749fbf6`; the regenerated notebook has not had a fresh GPU execution. Status remains **Candidate**.

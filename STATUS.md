@@ -1,3 +1,5 @@
 # Release status
 
 Current status: **Candidate** — clean GPU execution recorded; evidence review pending. The standalone `TASK-INFERENCE` tutorial `tutorials/ast_audio_classification_colab.ipynb` passed 8/8 unchanged code cells on a Colab Tesla T4 with Python 3.12.3 on 2026-09-13. See [the release-verification record](docs/release-verification.md) and [retained artifacts](docs/verification/2026-09-13/README.md) for the exact tested source commit and notebook blob, runtime pins, default sample outputs and cleanup confirmation. Static validation and generator parity remain source checks; the GPU run is inference/contract evidence. This documentation update performs no release promotion.
+
+Current source update: snapshot validation now runs before model-library imports (repair `fe0d775`, reviewer finding AST-001), so rejected requests fail with the intended validation error even when model libraries are absent. The standalone notebook was regenerated from this source (`b0bcd08`). The retained 2026-09-13 GPU run identifies the earlier notebook blob at `749fbf6`; the regenerated notebook has not had a fresh GPU execution. Status remains **Candidate**.

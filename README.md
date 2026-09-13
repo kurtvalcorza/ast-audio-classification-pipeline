@@ -56,3 +56,5 @@ Tests are offline: they use an injected fake runner and a temporary manifest, ne
 ## Licensing
 
 This repository's code is Apache-2.0 (`LICENSE`). The packaged upstream weights are BSD-3-Clause; see `docs/WEIGHTS.md` and `MODEL_CARD.md`.
+
+Current source update: snapshot validation now runs before model-library imports (repair `fe0d775`, reviewer finding AST-001), so rejected requests fail with the intended validation error even when model libraries are absent. The standalone notebook was regenerated from this source (`b0bcd08`). The retained 2026-09-13 GPU run identifies the earlier notebook blob at `749fbf6`; the regenerated notebook has not had a fresh GPU execution. Status remains **Candidate**.
