@@ -1,16 +1,32 @@
 ---
 license: bsd-3-clause
-model_card_spec: "1.0"
+model_card_spec: "1.1"
 pipeline_tag: audio-classification
 base_model: MIT/ast-finetuned-audioset-10-10-0.4593
 ---
 
-# Audio Spectrogram Transformer, AudioSet fine-tune (DIMER package v0.1.0)
+# Audio Spectrogram Transformer, AudioSet fine-tune (DIMER package v0.1.0) — Audio Event Classification
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-MIT%2Fast--finetuned--audioset--10--10--0.4593-ffcc4d?style=flat)](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593)
-[![GitHub](https://img.shields.io/badge/GitHub-YuanGongND%2Fast-181717?style=flat&logo=github&logoColor=white)](https://github.com/YuanGongND/ast)
-[![arXiv](https://img.shields.io/badge/arXiv-2104.01778-b31b1b.svg)](https://arxiv.org/abs/2104.01778)
+[![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-YuanGongND%2Fast-181717?style=flat&logo=github&logoColor=white)](https://github.com/YuanGongND/ast)
+[![arXiv Paper](https://img.shields.io/badge/arXiv-2104.01778-b31b1b.svg)](https://arxiv.org/abs/2104.01778)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+[![Pipeline](https://img.shields.io/badge/Pipeline-ast--audio--classification--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/ast-audio-classification-pipeline)
+
+> [!WARNING]
+> ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
+
+---
+
+## Interactive Colab Tutorials
+
+This pipeline provides a ready-to-run interactive Google Colab notebook that exercises the repository's public API end to end — bootstrap a fresh runtime, resolve and verify the pinned upstream revision, validate an input, run the task, and inspect and export the outputs:
+
+- **Task Inference Tutorial**:  
+  [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/ast-audio-classification-pipeline/blob/main/tutorials/ast_audio_classification_colab.ipynb) [`ast_audio_classification_colab.ipynb`](https://github.com/kurtvalcorza/ast-audio-classification-pipeline/blob/main/tutorials/ast_audio_classification_colab.ipynb)  
+  *Multi-label audio event classification over the 527 AudioSet labels with the pinned `MIT/ast-finetuned-audioset-10-10-0.4593` weights: 16 kHz waveform → 128-bin filterbank → one logit per label; no adaptation occurs.*
+
+---
 
 ###### Description
 
@@ -50,7 +66,7 @@ Operating environment: Python 3.12 with `torch==2.14.0` (CUDA 13.0 build), `torc
 
 ###### Performance Measures
 
-The pipeline reports no performance measure. `predict()` returns per-label sigmoid `score` values and their ranking; it does not compute mean average precision, per-label AUC, or top-k accuracy because none can be computed without labelled clips, and the repository ships no labelled audio. The upstream README states no number for this checkpoint beyond the name's "0.4593", which the AST paper reports as AudioSet mAP for this configuration; that figure is upstream-reported and was not reproduced here. An operator who needs a measure should collect clips labelled against the same 527-class ontology, run `predict()` with `top_k=527`, and compute mAP (the standard AudioSet measure, because it is threshold-free and averages over classes of very different frequency) alongside per-label precision at their chosen threshold, since mAP alone hides which classes fail.
+The pipeline reports no performance measure. `predict()` returns per-label sigmoid `score` values and their ranking; it does not compute mean average precision, per-label AUC, or top-k accuracy because none can be computed without labelled clips, and the repository ships no labelled audio. The upstream README states no number for this checkpoint beyond the name's "0.4593", which the AST paper reports as AudioSet mAP for this configuration; that figure is upstream-reported and was not reproduced here. An operator who needs a measure should collect clips labelled against the same 527-class ontology, run `predict()` with `top_k=527`, and compute mAP (the standard AudioSet measure, because it is threshold-free and averages over classes of very different frequency) alongside per-label precision at their chosen threshold, since mAP alone hides which classes fail. The public `evaluation_report(result)` helper is the only reporting path and always returns the verdict `not-measurable` for exactly this reason: it names the score semantics (independent sigmoids, not probabilities, no threshold shipped) and the labelled audio and metrics that would make the task measurable, rather than printing a number that would mean nothing.
 
 ###### Decision thresholds
 
@@ -73,7 +89,7 @@ This pipeline is not intended for decisions in health, safety, criminal justice,
 ###### Mitigations
 
 1. **Supply-chain integrity:** `MODEL_ID` and the 40-hex `MODEL_REVISION` are module constants; `verify_snapshot()` reads `weights/ast-audioset/dimer-base-manifest.json`, checks `modelId` and `revision` against those constants, and checks the byte size and SHA-256 of all four listed files before any load, raising on the first mismatch. The loader passes `local_files_only=True` for the verified directory and `trust_remote_code=False` always; `allow_download=True` is the only path to the Hub and it pins `revision=MODEL_REVISION`. A test flips one hex digit of a manifest digest and asserts the check raises.
-2. **Input integrity:** `predict()` rejects non-`ndarray`, non-1-D, non-float, NaN/inf input, non-integer or non-positive sample rates, clips under `MIN_AUDIO_SECONDS` or over `MAX_INPUT_SECONDS`, and `top_k` outside `[1, 527]` before the model runs (one test per check); the backend's logit shape is checked after.
+2. **Input integrity:** `predict()` rejects non-`ndarray`, non-1-D, non-float, NaN/inf input, non-integer or non-positive sample rates, clips under `MIN_AUDIO_SECONDS` or over `MAX_INPUT_SECONDS`, and `top_k` outside `[1, 527]` before the model runs (one test per check); the backend's logit shape is checked after. The public `validate_inputs(waveforms, sample_rate, names=...)` stage routes through the same private check, so it raises exactly what `predict` raises while returning a machine-readable input manifest of the schema, ceilings, per-clip observations and verdict.
 3. **Statistical mitigations:** none are implemented; there is no class balancing or subsampling because the pipeline does no training.
 4. **Reproducibility:** every runtime dependency is pinned with `==` in `pyproject.toml`; each result carries `model_id`, `model_revision`, `duration_seconds`, `window_seconds`, `resampled`, `input_sample_rate` and `truncated`.
 5. **Refusals:** no argmax or presence threshold is applied; labels are never asserted as present. No file loading, URL fetching, or streaming is exposed: the caller decodes audio and passes an array.

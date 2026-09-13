@@ -92,9 +92,24 @@ def test_verify_snapshot_rejects_wrong_revision_and_size(tmp_path):
         verify_snapshot(root)
 
 
-def test_from_pretrained_refuses_without_snapshot(tmp_path):
+def test_from_pretrained_refuses_without_snapshot(tmp_path, forbid_model_imports):
     with pytest.raises(FileNotFoundError):
         ASTAudioClassificationPipeline.from_pretrained(weights_dir=tmp_path, allow_download=False)
+
+
+def test_from_pretrained_refuses_tampered_snapshot_before_loading(tmp_path, forbid_model_imports):
+    _write_snapshot(tmp_path, b'{"a": 1}', "0" * 64)
+    with pytest.raises(ValueError, match="sha256"):
+        ASTAudioClassificationPipeline.from_pretrained(device="cpu", weights_dir=tmp_path)
+
+
+def test_from_pretrained_valid_snapshot_reaches_model_import(tmp_path, forbid_model_imports):
+    import hashlib
+
+    content = b'{"a": 1}'
+    _write_snapshot(tmp_path, content, hashlib.sha256(content).hexdigest())
+    with pytest.raises(AssertionError, match="model dependency imported before rejection: torch"):
+        ASTAudioClassificationPipeline.from_pretrained(device="cpu", weights_dir=tmp_path)
 
 
 @pytest.mark.parametrize(

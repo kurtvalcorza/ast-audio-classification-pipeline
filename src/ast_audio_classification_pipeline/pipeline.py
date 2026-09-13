@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -104,6 +104,133 @@ def _resample(waveform: np.ndarray, sample_rate: int) -> np.ndarray:
     return resampled.numpy().astype(np.float32)
 
 
+INPUT_SCHEMA: dict[str, Any] = {
+    "input": "1-D float numpy array of mono samples in [-1, 1], plus the sample_rate it was captured at",
+    "sample_rate_hz": f"any positive int; resampled to SAMPLE_RATE={SAMPLE_RATE} when it differs",
+    "duration_seconds": [MIN_AUDIO_SECONDS, MAX_INPUT_SECONDS],
+    "model_window_seconds": MAX_AUDIO_SECONDS,
+    "top_k": [1, NUM_LABELS],
+    "preprocessing": (
+        f"resample to {SAMPLE_RATE} Hz when needed, 128-bin Kaldi fbank with a 10 ms hop, "
+        f"pad or crop to {WINDOW_FRAMES} frames ({MAX_AUDIO_SECONDS} s)"
+    ),
+}
+
+
+def _check_inputs(audio: Any, sample_rate: Any, top_k: Any) -> float:
+    """Raise TypeError/ValueError naming the first violated ceiling; return the clip duration in seconds."""
+    if not isinstance(audio, np.ndarray):
+        raise TypeError(f"audio must be a numpy.ndarray, got {type(audio).__name__}")
+    if audio.ndim != 1:
+        raise ValueError(f"audio must be 1-D mono, got shape {audio.shape}")
+    if not np.issubdtype(audio.dtype, np.floating):
+        raise TypeError(f"audio must be a float array in [-1, 1], got dtype {audio.dtype}")
+    if not isinstance(sample_rate, int) or isinstance(sample_rate, bool) or sample_rate <= 0:
+        raise TypeError("sample_rate must be a positive int (the rate the audio was captured at)")
+    if not isinstance(top_k, int) or isinstance(top_k, bool) or not 1 <= top_k <= NUM_LABELS:
+        raise ValueError(f"top_k must be an int in [1, {NUM_LABELS}]")
+    if not np.all(np.isfinite(audio)):
+        raise ValueError("audio contains NaN or inf samples")
+    duration = audio.shape[0] / sample_rate
+    if duration < MIN_AUDIO_SECONDS:
+        raise ValueError(f"audio is {duration:.4f} s; minimum is {MIN_AUDIO_SECONDS} s")
+    if duration > MAX_INPUT_SECONDS:
+        raise ValueError(f"audio is {duration:.2f} s; ceiling is {MAX_INPUT_SECONDS} s (chunk it first)")
+    return duration
+
+
+def validate_inputs(
+    waveforms: Any,
+    sample_rate: Any,
+    *,
+    top_k: int = DEFAULT_TOP_K,
+    names: Sequence[str] | None = None,
+) -> dict[str, Any]:
+    """Validation stage: return the input manifest (schema, per-clip observations, verdict).
+
+    The checks are the ones ``predict`` applies, through the same private ``_check_inputs``, so a
+    rejection here raises exactly what ``predict`` would; a caller that wants the finding recorded
+    catches the exception and stores ``str(exc)`` under ``findings``.
+    """
+    batch = [waveforms] if isinstance(waveforms, np.ndarray) else waveforms
+    if not isinstance(batch, Sequence) or isinstance(batch, str | bytes):
+        raise TypeError("waveforms must be a 1-D numpy.ndarray or a sequence of them")
+    if len(batch) < 1:
+        raise ValueError("at least one waveform is required")
+    if names is not None and len(names) != len(batch):
+        raise ValueError("names must have one entry per waveform")
+    inputs = []
+    for index, waveform in enumerate(batch):
+        duration = _check_inputs(waveform, sample_rate, top_k)
+        inputs.append(
+            {
+                "id": names[index] if names else f"clip-{index}",
+                "samples": int(waveform.shape[0]),
+                "dtype": str(waveform.dtype),
+                "duration_seconds": round(duration, 4),
+                "peak_amplitude": round(float(np.max(np.abs(waveform))), 6),
+                "will_resample": sample_rate != SAMPLE_RATE,
+                "will_truncate": duration > MAX_AUDIO_SECONDS,
+            }
+        )
+    return {
+        "schema": dict(INPUT_SCHEMA),
+        "inputs": inputs,
+        "sample_rate": sample_rate,
+        "top_k": top_k,
+        "n_clips": len(inputs),
+        "verdict": "accepted",
+        "findings": [],
+        "model_id": MODEL_ID,
+        "model_revision": MODEL_REVISION,
+    }
+
+
+def evaluation_report(
+    result: Mapping[str, Any], targets: Sequence[Any] | None = None, *, sample_kind: str = "synthetic"
+) -> dict[str, Any]:
+    """Evaluation stage: always ``not-measurable`` — this repository ships no metric helper (EVAL9).
+
+    Multi-label AudioSet scores need clips labelled against the same 527-label ontology to mean
+    anything, and the tutorial sample is a synthetic tone with no ground truth. ``targets`` is
+    accepted so the signature matches the fleet's other pipelines, but there is no metric helper to
+    route them through: the report stays ``not-measurable`` and names what a real evaluation needs.
+    """
+    predictions = result["predictions"]
+    reason = (
+        "no AudioSet-labelled ground truth exists for the evaluated clip, and no metric helper is shipped"
+    )
+    if targets is not None:
+        reason = (
+            "targets were supplied, but this repository ships no metric helper for multi-label audio; "
+            "score them with an AudioSet-convention mAP implementation of your own"
+        )
+    return {
+        "task": "multi-label audio event classification over the 527 AudioSet labels",
+        "score_semantics": (
+            f"independent {result.get('activation', ACTIVATION)} score per label: the scores do not sum "
+            "to one, several labels can be high at once, none is a calibrated probability, and no "
+            "threshold is shipped"
+        ),
+        "sample_kind": sample_kind,
+        "n_clips": 1,
+        "n_scored_labels": len(predictions),
+        "metrics": [],
+        "baselines": [],
+        "verdict": "not-measurable",
+        "reason": reason,
+        "needs": (
+            f"clips labelled against the same {NUM_LABELS}-label AudioSet ontology, scored over the full "
+            "score vector (predict(..., top_k=527)) with mean average precision plus per-label precision "
+            "and recall at a threshold chosen on your own labelled clips; the '0.4593' in the checkpoint "
+            "name is the upstream-reported AudioSet mAP and is not measured here"
+        ),
+        "truncated": bool(result.get("truncated", False)),
+        "model_id": MODEL_ID,
+        "model_revision": MODEL_REVISION,
+    }
+
+
 @dataclass
 class ASTAudioClassificationPipeline:
     """Multi-label AudioSet classifier. `_runner` maps a 16 kHz float32 waveform to raw logits (527,)."""
@@ -119,10 +246,6 @@ class ASTAudioClassificationPipeline:
         weights_dir: str | Path | None = None,
         allow_download: bool = False,
     ) -> ASTAudioClassificationPipeline:
-        import torch
-        from transformers import ASTFeatureExtractor, ASTForAudioClassification
-
-        resolved_device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         root = Path(weights_dir) if weights_dir is not None else DEFAULT_WEIGHTS_DIR
         if (root / MANIFEST_NAME).is_file():
             stage_missing_files(root, allow_download=allow_download)
@@ -132,6 +255,11 @@ class ASTAudioClassificationPipeline:
             source, kwargs = MODEL_ID, dict(revision=MODEL_REVISION)
         else:
             raise FileNotFoundError(f"no verified snapshot at {root} and allow_download=False")
+        # Refuse invalid snapshots before importing model libraries.
+        import torch
+        from transformers import ASTFeatureExtractor, ASTForAudioClassification
+
+        resolved_device = device or ("cuda:0" if torch.cuda.is_available() else "cpu")
         extractor = ASTFeatureExtractor.from_pretrained(source, trust_remote_code=False, **kwargs)
         model = ASTForAudioClassification.from_pretrained(
             source, trust_remote_code=False, dtype=torch.float32, **kwargs
@@ -154,24 +282,7 @@ class ASTAudioClassificationPipeline:
         top_k: int = DEFAULT_TOP_K,
     ) -> dict[str, Any]:
         """Classify one clip. `audio` is a 1-D float array; `sample_rate` is the rate it was captured at."""
-        if not isinstance(audio, np.ndarray):
-            raise TypeError(f"audio must be a numpy.ndarray, got {type(audio).__name__}")
-        if audio.ndim != 1:
-            raise ValueError(f"audio must be 1-D mono, got shape {audio.shape}")
-        if not np.issubdtype(audio.dtype, np.floating):
-            raise TypeError(f"audio must be a float array in [-1, 1], got dtype {audio.dtype}")
-        if not isinstance(sample_rate, int) or isinstance(sample_rate, bool) or sample_rate <= 0:
-            raise TypeError("sample_rate must be a positive int (the rate the audio was captured at)")
-        if not isinstance(top_k, int) or isinstance(top_k, bool) or not 1 <= top_k <= NUM_LABELS:
-            raise ValueError(f"top_k must be an int in [1, {NUM_LABELS}]")
-        if not np.all(np.isfinite(audio)):
-            raise ValueError("audio contains NaN or inf samples")
-        duration = audio.shape[0] / sample_rate
-        if duration < MIN_AUDIO_SECONDS:
-            raise ValueError(f"audio is {duration:.4f} s; minimum is {MIN_AUDIO_SECONDS} s")
-        if duration > MAX_INPUT_SECONDS:
-            raise ValueError(f"audio is {duration:.2f} s; ceiling is {MAX_INPUT_SECONDS} s (chunk it first)")
-
+        duration = _check_inputs(audio, sample_rate, top_k)
         waveform = audio.astype(np.float32, copy=False)
         resampled = sample_rate != SAMPLE_RATE
         if resampled:

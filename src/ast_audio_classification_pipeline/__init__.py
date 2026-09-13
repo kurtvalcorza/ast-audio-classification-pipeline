@@ -1,7 +1,10 @@
 from .pipeline import (
+    DEFAULT_TOP_K,
     DEFAULT_WEIGHTS_DIR,
+    INPUT_SCHEMA,
     MAX_AUDIO_SECONDS,
     MAX_INPUT_SECONDS,
+    MIN_AUDIO_SECONDS,
     MODEL_ID,
     MODEL_KEY,
     MODEL_LICENSE,
@@ -9,14 +12,19 @@ from .pipeline import (
     NUM_LABELS,
     SAMPLE_RATE,
     ASTAudioClassificationPipeline,
+    evaluation_report,
     stage_missing_files,
+    validate_inputs,
     verify_snapshot,
 )
 
 __all__ = [
+    "DEFAULT_TOP_K",
     "DEFAULT_WEIGHTS_DIR",
+    "INPUT_SCHEMA",
     "MAX_AUDIO_SECONDS",
     "MAX_INPUT_SECONDS",
+    "MIN_AUDIO_SECONDS",
     "MODEL_ID",
     "MODEL_KEY",
     "MODEL_LICENSE",
@@ -24,6 +32,8 @@ __all__ = [
     "NUM_LABELS",
     "SAMPLE_RATE",
     "ASTAudioClassificationPipeline",
+    "evaluation_report",
     "stage_missing_files",
+    "validate_inputs",
     "verify_snapshot",
 ]
