@@ -3,6 +3,8 @@ license: bsd-3-clause
 model_card_spec: "1.1"
 pipeline_tag: audio-classification
 base_model: MIT/ast-finetuned-audioset-10-10-0.4593
+date_published: "2022-11-14"
+date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/MIT/ast-finetuned-audioset-10-10-0.4593)"
 ---
 
 # Audio Spectrogram Transformer, AudioSet fine-tune (DIMER package v0.1.0) — Audio Event Classification
@@ -11,7 +13,6 @@ base_model: MIT/ast-finetuned-audioset-10-10-0.4593
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-YuanGongND%2Fast-181717?style=flat&logo=github&logoColor=white)](https://github.com/YuanGongND/ast)
 [![arXiv Paper](https://img.shields.io/badge/arXiv-2104.01778-b31b1b.svg)](https://arxiv.org/abs/2104.01778)
 [![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-[![Pipeline](https://img.shields.io/badge/Pipeline-ast--audio--classification--pipeline-2ea44f?style=flat&logo=github)](https://github.com/kurtvalcorza/ast-audio-classification-pipeline)
 
 > [!WARNING]
 > ⚠️ **Provided for research, training, and evaluation purposes only.** Model weights are redistributed unmodified under their upstream license, which controls your use, including any commercial use or redistribution; the accompanying code and notebooks are released under this repository's license. All of it is supplied **"as is"**, without warranty of any kind, and has not been validated for production, clinical, or safety-critical use. Running the notebooks downloads third-party weights and datasets governed by their own licenses and consumes compute on your own Colab/Kaggle account. To the maximum extent permitted by law, the maintainers of this repository and the DIMER platform accept no liability for any damages arising from their use. Hosting implies no affiliation with or endorsement by the original authors.
@@ -28,7 +29,7 @@ This pipeline provides a ready-to-run interactive Google Colab notebook that exe
 
 ---
 
-###### Description
+#### Description
 
 This package wraps the Audio Spectrogram Transformer (AST) checkpoint `MIT/ast-finetuned-audioset-10-10-0.4593`, pinned to revision `f826b80d28226b62986cc218e5cec390b1096902`. AST is a Vision-Transformer-style encoder applied to a log-mel spectrogram: the pinned `config.json` describes 12 layers of hidden size 768 over 16x16 patches with stride 10 in both time and frequency, and a 527-way classification head over the AudioSet ontology (Gong et al., 2021). At inference the feature extractor converts 16 kHz mono audio into a 128-bin Kaldi filterbank, pads or crops it to 1,024 frames, and the encoder emits one logit per label; no adaptation happens at inference and this repository trains nothing. What the repository adds is the `ASTAudioClassificationPipeline` class in `src/ast_audio_classification_pipeline/pipeline.py`: manifest-based snapshot verification (`verify_snapshot`), a loader that refuses unverified or remote code, input validation with named ceilings, an explicit sigmoid over the logits with top-k selection, and provenance fields in every result.
 
