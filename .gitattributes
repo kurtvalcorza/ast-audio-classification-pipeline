@@ -1,0 +1,5 @@
+
+# Preserve downloaded verification evidence byte-for-byte for SHA-256 checks
+docs/verification/2026-09-13/** -text
+# Python csv.writer exports CRLF; keep the original bytes and accept its CR terminator
+docs/verification/2026-09-13/outputs/*.csv whitespace=cr-at-eol

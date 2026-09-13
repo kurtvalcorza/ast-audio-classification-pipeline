@@ -1,0 +1,6 @@
+clip,rank,index,label,score
+synthetic_sine_440hz_3s.wav,1,501,Sine wave,0.841864
+synthetic_sine_440hz_3s.wav,2,393,Dial tone,0.032473
+synthetic_sine_440hz_3s.wav,3,503,Chirp tone,0.010536
+synthetic_sine_440hz_3s.wav,4,481,"Beep, bleep",0.009725
+synthetic_sine_440hz_3s.wav,5,394,Busy signal,0.007299

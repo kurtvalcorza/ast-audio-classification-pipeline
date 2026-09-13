@@ -1,0 +1,15 @@
+{
+  "task": "multi-label audio event classification over the 527 AudioSet labels",
+  "score_semantics": "independent sigmoid score per label: the scores do not sum to one, several labels can be high at once, none is a calibrated probability, and no threshold is shipped",
+  "sample_kind": "synthetic",
+  "n_clips": 1,
+  "n_scored_labels": 5,
+  "metrics": [],
+  "baselines": [],
+  "verdict": "not-measurable",
+  "reason": "no AudioSet-labelled ground truth exists for the evaluated clip, and no metric helper is shipped",
+  "needs": "clips labelled against the same 527-label AudioSet ontology, scored over the full score vector (predict(..., top_k=527)) with mean average precision plus per-label precision and recall at a threshold chosen on your own labelled clips; the '0.4593' in the checkpoint name is the upstream-reported AudioSet mAP and is not measured here",
+  "truncated": false,
+  "model_id": "MIT/ast-finetuned-audioset-10-10-0.4593",
+  "model_revision": "f826b80d28226b62986cc218e5cec390b1096902"
+}
