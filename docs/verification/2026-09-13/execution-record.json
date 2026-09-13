@@ -1,0 +1,98 @@
+{
+  "repository": "ast-audio-classification-pipeline",
+  "commit": "749fbf6b9a87bbf67394aad2e338252d29d5910b",
+  "notebook": "ast_audio_classification_colab.ipynb",
+  "git_blob": "59edb7e523cd419cd64e49624e793d9de205b033",
+  "sha256": "6dfac5f8acb99a958b14091d6b42f07a40963f894c569f534dab49434c809db4",
+  "status_before": [],
+  "gpu": "Tesla T4, 15360 MiB, 580.82.07",
+  "status": "passed",
+  "hf_cache_clean_before": true,
+  "weights_clean_before": true,
+  "executor": "Colab CLI -> isolated Python 3.12 -> unchanged code cells",
+  "python": "3.12.3",
+  "exit_code": 0,
+  "execution_summary": {
+    "input_sha256": "6dfac5f8acb99a958b14091d6b42f07a40963f894c569f534dab49434c809db4",
+    "cells": [
+      {
+        "index": 3,
+        "seconds": 122.575,
+        "error": null
+      },
+      {
+        "index": 5,
+        "seconds": 0.006,
+        "error": null
+      },
+      {
+        "index": 7,
+        "seconds": 10.522,
+        "error": null
+      },
+      {
+        "index": 9,
+        "seconds": 0.014,
+        "error": null
+      },
+      {
+        "index": 11,
+        "seconds": 0.005,
+        "error": null
+      },
+      {
+        "index": 13,
+        "seconds": 0.993,
+        "error": null
+      },
+      {
+        "index": 15,
+        "seconds": 0.001,
+        "error": null
+      },
+      {
+        "index": 17,
+        "seconds": 0.002,
+        "error": null
+      }
+    ],
+    "status": "passed",
+    "source_cells_unchanged": true
+  },
+  "seconds": 138.366,
+  "verification_checks": {
+    "original_sha256_matches_baseline": true,
+    "remote_input_sha256_matches_baseline": true,
+    "python_matches_supported_3_12": true,
+    "source_cells_unchanged": true,
+    "all_code_cells_executed_without_errors": true,
+    "inference_device_is_cuda": true,
+    "exported_source_revision_matches_notebook": true,
+    "input_manifest_accepted": true,
+    "negative_validation_probe_recorded": true,
+    "five_ranked_predictions": true,
+    "sigmoid_scores_valid_and_sorted": true,
+    "all_inline_pins_match_installed_versions": true
+  },
+  "verified_status": "PASS",
+  "execution_date_utc": "2026-09-13",
+  "cell_wall_seconds": 134.118,
+  "total_wall_seconds_including_environment_setup": 138.366,
+  "runtime": {
+    "python": "3.12.3",
+    "torch": "2.14.0+cu130",
+    "torchaudio": "2.11.0+cu130",
+    "transformers": "4.57.6",
+    "device": "cuda:0"
+  },
+  "model_id": "MIT/ast-finetuned-audioset-10-10-0.4593",
+  "model_revision": "f826b80d28226b62986cc218e5cec390b1096902",
+  "executor_source_sha256": "21c82435e1559a24e391bca9afa0743269602578a525068eda273dc9e4bd02bc",
+  "cleanup": {
+    "stop_output": "[colab] Stopping session 'dimer-gpu-clean312-0913'...\n[colab] Session terminated.\n",
+    "sessions_after_output": "[colab] No active sessions found on server.\n"
+  },
+  "scope": "unchanged default sample code cells; GPU inference and contract checks",
+  "release_status": "Candidate; evidence review pending",
+  "native_hosted_notebook_run": "Aborted in install cell after Python 3.13 mismatch was confirmed; not a completed runtime result"
+}

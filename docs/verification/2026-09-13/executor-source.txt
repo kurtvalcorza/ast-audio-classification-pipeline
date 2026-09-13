@@ -1,0 +1,60 @@
+"""Execute the unchanged default notebook cells in a fresh Python interpreter."""
+import contextlib
+import hashlib
+import io
+import json
+from pathlib import Path
+import sys
+import time
+import traceback
+
+source = Path(sys.argv[1])
+notebook = json.loads(source.read_text())
+output = source.with_name(source.stem+'_output.ipynb')
+namespace = {'__name__': '__main__'}
+summary = {'input_sha256': hashlib.sha256(source.read_bytes()).hexdigest(), 'cells': [], 'status': 'running'}
+
+class Tee(io.StringIO):
+    def __init__(self, console):
+        super().__init__()
+        self.console = console
+    def write(self, text):
+        self.console.write(text)
+        self.console.flush()
+        return super().write(text)
+    def flush(self):
+        self.console.flush()
+
+for index, cell in enumerate(notebook['cells']):
+    if cell['cell_type'] != 'code':
+        continue
+    code = ''.join(cell['source']) if isinstance(cell['source'], list) else cell['source']
+    print(f'CELL_START {index}', flush=True)
+    stdout, stderr = Tee(sys.stdout), Tee(sys.stderr)
+    started = time.monotonic()
+    error = None
+    with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+        try:
+            exec(compile(code, f'{source.name}:cell-{index}', 'exec'), namespace)
+        except BaseException as exc:
+            error = {'output_type': 'error', 'ename': type(exc).__name__, 'evalue': str(exc), 'traceback': traceback.format_exception(exc)}
+            traceback.print_exc()
+    cell['execution_count'] = len(summary['cells'])+1
+    cell['outputs'] = []
+    for name, stream in [('stdout', stdout), ('stderr', stderr)]:
+        if stream.getvalue():
+            cell['outputs'].append({'output_type': 'stream', 'name': name, 'text': stream.getvalue().splitlines(keepends=True)})
+    if error:
+        cell['outputs'].append(error)
+    summary['cells'].append({'index': index, 'seconds': round(time.monotonic()-started, 3), 'error': error})
+    output.write_text(json.dumps(notebook, indent=1))
+    print(f'CELL_FINISH {index} seconds={summary["cells"][-1]["seconds"]} error={error is not None}', flush=True)
+    if error:
+        summary['status'] = 'failed'
+        break
+else:
+    summary['status'] = 'passed'
+summary['source_cells_unchanged'] = [cell['source'] for cell in notebook['cells']] == [cell['source'] for cell in json.loads(source.read_text())['cells']]
+Path('clean-execution-summary.json').write_text(json.dumps(summary, indent=2))
+print('CLEAN_EXECUTION_RESULT', summary['status'], flush=True)
+sys.exit(0 if summary['status'] == 'passed' else 1)

@@ -1,10 +1,6 @@
 # Release verification
 
-`tutorials/ast_audio_classification_colab.ipynb` (`TASK-INFERENCE`) is a **release candidate** until
-the exact notebook revision has executed top-to-bottom in a clean supported runtime. Unit tests,
-JSON validation, code-cell compilation, and `tools/validate_release_assets.py` are necessary
-checks but are **not** runtime evidence under DIMER Notebook Specification 1.1. This file is
-the durable release-gate record for the notebook.
+`tutorials/ast_audio_classification_colab.ipynb` (`TASK-INFERENCE`, **standalone** carrier) remains a **release candidate**. A clean Python 3.12 GPU execution of the exact notebook blob was recorded on 2026-09-13; the result and retained artifacts are below. Static checks are not runtime evidence, and promotion still requires a reviewer to accept the recorded run.
 
 ## Automatic coverage (static, every pull request)
 
@@ -102,32 +98,20 @@ A known-failing default path in the supported runtime blocks release.
 
 ## Recorded executions
 
-Notebook identity is the Git blob id of `tutorials/ast_audio_classification_colab.ipynb` (verify with
-`git rev-parse <commit>:tutorials/ast_audio_classification_colab.ipynb`). Wall times, when recorded,
-are the sum of per-cell times reported by the executor and include installs and the model download;
-they are measurements for the stated runtime, not general estimates.
+Notebook identity is the Git blob of `tutorials/ast_audio_classification_colab.ipynb` at the source commit in the row below. The documentation commit recording the run does not change that notebook blob. Cell wall time is the sum of recorded code-cell times, including installation and model downloads; total time additionally includes environment setup and bookkeeping. These measurements describe this one run.
 
 ### Manual clean-runtime evidence
 
-| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall | Outcome |
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Cell wall / total | Outcome |
 |---|---|---|---|---|---|
-| | | | Default sample path | | pending — queued to the GPU lane |
+| 2026-09-13 | `749fbf6b9a87bbf67394aad2e338252d29d5910b` / `59edb7e523cd419cd64e49624e793d9de205b033` | Colab CLI → fresh Python 3.12.3 venv/interpreter; Tesla T4, 15,360 MiB | Unchanged default sample, no repository checkout, empty per-model cache and weights | 134.118 s / 138.366 s | PASS — 8/8 cells; evidence review pending; [Retained run](verification/2026-09-13/README.md) |
+
+The run used PyTorch `2.14.0+cu130`, `cuda:0` and `float32`. All eight code cells completed, runtime pins matched, every snapshot file was SHA-256 verified, inputs were accepted, and the negative validation probe was recorded. Results, model identity/revision, observed output, warnings, package versions, notebook outputs, executor source and cleanup evidence are retained in [the run record](verification/2026-09-13/README.md).
+
+The native hosted kernel was Python 3.13.15; its direct notebook attempt was aborted in installation after the Python-version mismatch was confirmed. The successful result above uses the repository-supported Python 3.12 interpreter on the Colab GPU. No completed native hosted-kernel run is claimed.
 
 ## Current status
 
-No clean-runtime execution of the notebook has been recorded yet; the run is **pending** and queued
-to the GPU lane. Static validation (`tools/validate_release_assets.py`), nbformat validation, a
-`compile()` sweep over every code cell, and the offline unit suite passed on the tutorial source at
-the candidate revision, which is necessary but not sufficient. The registry status remains
-**Candidate** until a reviewer confirms a recorded run against the notebook blob under review and
-an integrator promotes it; promotion is not performed by the builder. Facts a reviewer should weigh:
-the card pass executed the pipeline only from the verified local snapshot on CUDA (`returns/L3`:
-CPU path not executed) and `stage_missing_files` was exercised only with an injected downloader in
-the unit suite, so the clean run will be the first real execution of the notebook's staging path and
-of CPU inference against the real weights; and
-`torchaudio==2.11.0` is required at runtime because the Transformers feature extractor uses
-`torchaudio.compliance.kaldi.fbank` when torchaudio is importable.
+Clean GPU execution evidence is now recorded for the exact notebook blob above. The registry status remains **Candidate** pending a reviewer’s acceptance of the evidence and an integrator’s promotion. This documentation change performs no promotion. The run is default-sample inference/contract evidence; it does not establish model quality or a benchmark result. CPU and BYOD paths were not exercised by this GPU run.
 
-A third fact a reviewer should weigh from the standalone pass: the carrier itself — executing the
-carried module cell in a runtime that has no repository checkout — has been validated statically only
-(parity PASS plus an offline carrier probe that stopped before any fetch), never run.
+Current source update: snapshot validation now runs before model-library imports (repair `fe0d775`, reviewer finding AST-001), so rejected requests fail with the intended validation error even when model libraries are absent. The standalone notebook was regenerated from this source (`b0bcd08`). The retained 2026-09-13 GPU run identifies the earlier notebook blob at `749fbf6`; the regenerated notebook has not had a fresh GPU execution. Status remains **Candidate**.

@@ -14,7 +14,7 @@ and regenerate (`python tools/build_notebook.py`; `--check` is enforced by the v
 
 | Notebook | Profile | Carrier | Capability | Default runtime | BYOD | Release status |
 |---|---|---|---|---|---|---|
-| `ast_audio_classification_colab.ipynb` | `TASK-INFERENCE` | standalone (generated) | multi-label audio event classification over the 527 AudioSet labels with `MIT/ast-finetuned-audioset-10-10-0.4593`; rank-ordered independent sigmoid scores, no shipped threshold; `validate_inputs` → input manifest; `evaluation_report` → always `not-measurable` (no metric helper, no labelled audio) | CPU (CUDA used automatically when available) | single PCM WAV file, gated off by default | **Candidate** — static checks pass; the clean-runtime execution run is pending and will be recorded in `../docs/release-verification.md`, which must be reviewed for the exact notebook revision before promotion |
+| `ast_audio_classification_colab.ipynb` | `TASK-INFERENCE` | standalone (generated) | multi-label audio event classification over the 527 AudioSet labels with `MIT/ast-finetuned-audioset-10-10-0.4593`; rank-ordered independent sigmoid scores, no shipped threshold; `validate_inputs` → input manifest; `evaluation_report` → always `not-measurable` (no metric helper, no labelled audio) | CPU (CUDA used automatically when available) | single PCM WAV file, gated off by default | **Candidate** — 8/8 default code cells passed on Colab T4 / isolated Python 3.12 on 2026-09-13; [recorded evidence](../docs/release-verification.md) awaits review |
 
 ## Conformance notes
 
@@ -30,3 +30,5 @@ and regenerate (`python tools/build_notebook.py`; `--check` is enforced by the v
   clean-runtime execution requirement; a release review must confirm that a recorded clean run in
   `docs/release-verification.md` matches the notebook revision under review before the status is
   promoted to `Release-grade`.
+
+Current source update: snapshot validation now runs before model-library imports (repair `fe0d775`, reviewer finding AST-001), so rejected requests fail with the intended validation error even when model libraries are absent. The standalone notebook was regenerated from this source (`b0bcd08`). The retained 2026-09-13 GPU run identifies the earlier notebook blob at `749fbf6`; the regenerated notebook has not had a fresh GPU execution. Status remains **Candidate**.
