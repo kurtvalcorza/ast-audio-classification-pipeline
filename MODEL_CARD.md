@@ -61,7 +61,7 @@ The training data behind the checkpoint is AudioSet: audio tracks of YouTube vid
 
 ###### Environment
 
-Operating environment: Python 3.12 with `torch==2.14.0` (CUDA 13.0 build), `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3` (`pyproject.toml`). The smoke run recorded under "Runtime" used an NVIDIA RTX 5070 Ti (16 GB, sm_120) in float32 with a peak of 414 MiB allocated; the model is 346 MB of float32 weights and runs on CPU with the same code path (`device="cpu"`), though CPU latency was not measured in this pass. Data environment: the model assumes clips resembling AudioSet's YouTube distribution of everyday sounds at consumer quality, scored in a fixed 10.24 s window. Long clips are cropped, so events after the window are invisible; quiet events under louder ones, unusual microphones, ultrasonic or sub-bass content, and sound classes absent from the ontology degrade to low or wrong scores rather than to an error.
+Operating environment: Python 3.12 with `torch==2.14.0` (CUDA 13.0 build), `torchaudio==2.11.0`, `torchvision==0.29.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3` (`pyproject.toml`). The smoke run recorded under "Runtime" used an NVIDIA RTX 5070 Ti (16 GB, sm_120) in float32 with a peak of 414 MiB allocated; the model is 346 MB of float32 weights and runs on CPU with the same code path (`device="cpu"`), though CPU latency was not measured in this pass. Data environment: the model assumes clips resembling AudioSet's YouTube distribution of everyday sounds at consumer quality, scored in a fixed 10.24 s window. Long clips are cropped, so events after the window are invisible; quiet events under louder ones, unusual microphones, ultrasonic or sub-bass content, and sound classes absent from the ontology degrade to low or wrong scores rather than to an error.
 
 #### Metrics
 
@@ -126,7 +126,7 @@ The pipeline must not be used for covert surveillance of people through their re
 
 ## Runtime
 
-- Pins (`pyproject.toml`): `torch==2.14.0` (cu130 build in the venv), `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`; dev `pytest==8.4.2`, `ruff==0.16.6`. Python 3.12.
+- Pins (`pyproject.toml`): `torch==2.14.0` (cu130 build in the venv), `torchaudio==2.11.0`, `torchvision==0.29.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`; dev `pytest==8.4.2`, `ruff==0.16.6`. Python 3.12.
 - Executed 2026-09-12 in the `dimer-next16` Linux venv (WSL, claude-science): `pytest -q -o addopts= tests` — 18 passed, exit 0; `ruff check src tests` clean.
 - Smoke, executed: `from_pretrained()` on the verified snapshot, `predict()` on a 3 s 440 Hz sine at 16 kHz, `device="cuda:0"`, float32; load 4.56 s, inference 0.29 s, 4.85 s total, peak 414 MiB; top-5 `Sine wave` 0.8419, `Dial tone` 0.0325, `Chirp tone` 0.0105, `Beep, bleep` 0.0097, `Busy signal` 0.0073; `truncated: false`.
 - Not executed: the CPU path, the `allow_download=True` Hub path, inputs longer than the window against the real model, and any labelled evaluation.
