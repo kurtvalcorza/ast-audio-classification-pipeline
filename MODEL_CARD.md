@@ -7,7 +7,7 @@ date_published: "2022-11-14"
 date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/MIT/ast-finetuned-audioset-10-10-0.4593)"
 ---
 
-# Audio Spectrogram Transformer, AudioSet fine-tune (DIMER package v0.1.0) — Audio Event Classification
+# Audio Spectrogram Transformer, AudioSet fine-tune — Audio Event Classification
 
 [![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-MIT%2Fast--finetuned--audioset--10--10--0.4593-ffcc4d?style=flat)](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593)
 [![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-YuanGongND%2Fast-181717?style=flat&logo=github&logoColor=white)](https://github.com/YuanGongND/ast)
