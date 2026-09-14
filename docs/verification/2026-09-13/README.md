@@ -46,3 +46,7 @@ The read-back checks confirmed the exact source hash and Git blob, unchanged cod
 - [ast_audio_classification_top_k.csv](outputs/ast_audio_classification_top_k.csv)
 
 The CLI stopped the shared runtime after all four notebook tests; a subsequent `colab sessions` call returned no active sessions. Both cleanup outputs are retained in the execution record. Repository release status remains **Candidate** pending evidence review; this record does not promote it.
+
+## AI Assistance Disclosure
+
+This tutorial and its accompanying documentation were developed with generative AI assistance for code development and technical writing under maintainer direction. The maintainer remains responsible for reviewing the implementation, validating results, and making release decisions. AI assistance does not constitute independent verification, provider endorsement, or release approval.
