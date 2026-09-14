@@ -2,6 +2,7 @@
 license: bsd-3-clause
 model_card_spec: "1.1"
 pipeline_tag: audio-classification
+task: "Others - Audio Event Classification"
 base_model: MIT/ast-finetuned-audioset-10-10-0.4593
 date_published: "2022-11-14"
 date_published_source: "Hugging Face Hub repository creation date of the exact hosted checkpoint (`createdAt`, https://huggingface.co/api/models/MIT/ast-finetuned-audioset-10-10-0.4593)"
