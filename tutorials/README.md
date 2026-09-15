@@ -8,7 +8,7 @@ Notebook specification: **DIMER Notebook Specification 2.0**. The notebook is a 
 
 | Notebook | Profile | Mode | Carrier | Capability | Default runtime | Samples | BYOD | Run-all | Release status |
 |---|---|---|---|---|---|---|---|---|---|
-| `ast_audio_classification_colab.ipynb` | `E2E` | `GUIDED` | standalone (generated) | pinned 527-label AudioSet inference, followed by a frozen-backbone three-class acoustic-ecology adaptation, held-out evaluation, classifier-head artifact export, fresh reload, and numerical parity check | CPU; CUDA used automatically | generated 24-clip balanced dataset, 18 train / 6 validation | optional single PCM WAV for base inference; optional bounded three-directory ZIP for adaptation; both off by default | current E2E revision has no clean supported-runtime execution record | Candidate — source checks and local CPU evidence recorded; fresh supported-runtime evidence required in [release verification](../docs/release-verification.md) |
+| `ast_audio_classification_colab.ipynb` | `E2E` | `GUIDED` | standalone (generated) | pinned 527-label AudioSet inference, followed by a frozen-backbone three-class acoustic-ecology adaptation, held-out evaluation, classifier-head artifact export, fresh reload, and numerical parity check | CPU; CUDA used automatically | generated 24-clip balanced dataset, 18 train / 6 validation | optional single PCM WAV for base inference; optional bounded three-directory ZIP for adaptation; both off by default | verified — clean Kaggle T4 Run all recorded for commit `b939aa3`, blob `3a99508` (16/16 cells) | Candidate — clean-room execution recorded in [release verification](../docs/release-verification.md); promotion decision pending |
 
 ## Conformance notes
 
@@ -18,7 +18,7 @@ Notebook specification: **DIMER Notebook Specification 2.0**. The notebook is a 
 - **Evaluation:** base AudioSet inference is still not measurable without ontology-aligned labels. The adapted path evaluates six held-out clips with multiclass accuracy, macro-F1, per-class statistics, confusion matrix, and the delta from a majority-class baseline. This small synthetic result is a sample-sanity check, not a real-world benchmark.
 - **Artifact:** `outputs/ast-audio-adapter-v1.pt` stores only the 3,843-parameter classifier head plus ordered classes, adaptation configuration, and exact base lineage. Reload uses `torch.load(..., weights_only=True)` over a fresh pinned base-model instance.
 - **Outputs:** the run writes an input manifest, evaluation report, result/provenance JSON, rank-ordered CSV, and adapter artifact under `outputs/`.
-- **Release boundary:** static validation and local execution are not clean supported-runtime evidence. The current notebook remains Candidate until its exact generated revision passes unchanged from top to bottom in a fresh supported runtime and the evidence is reviewed.
+- **Release boundary:** the exact current notebook passed unchanged from top to bottom on a clean Kaggle T4. It remains Candidate until the retained evidence is reviewed and an integrator explicitly approves promotion.
 
 ## AI Assistance Disclosure
 

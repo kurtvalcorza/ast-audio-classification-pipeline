@@ -1,0 +1,4 @@
+clip,rank,index,label,score
+unseen_test_clip_99,1,1,biophony,0.987455
+unseen_test_clip_99,2,2,anthrophony,0.011799
+unseen_test_clip_99,3,0,geophony,0.000746

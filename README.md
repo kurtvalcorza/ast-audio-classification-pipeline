@@ -77,7 +77,7 @@ The unit suite is offline and uses injected or tiny models. A separate local CPU
 
 ## Release status
 
-**Candidate.** Source validation, offline tests, and a local CPU run of the current E2E implementation are recorded. The prior 2026-09-13 clean Colab execution covered an older inference-only notebook blob and does not qualify this E2E revision. Promotion requires an unchanged top-to-bottom run of the current generated notebook in a fresh supported runtime and review of its retained evidence. See `docs/release-verification.md`.
+**Candidate.** Source validation, 46 offline tests, local CPU pre-flight, and an unchanged clean Kaggle Tesla T4 run of the current E2E notebook are recorded. Kaggle verified commit `b939aa3` and notebook blob `3a99508`, then completed 16/16 cells after the expected dependency-install restart. Promotion remains a separate evidence-review decision. See `docs/release-verification.md`.
 
 ## Licensing
 
