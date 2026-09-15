@@ -58,6 +58,7 @@ Optional single-WAV and dataset-ZIP branches should be tested separately. Their 
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall time | Outcome |
 |---|---|---|---|---:|---|
+| 2026-09-15 | `79543f3bb5a745493cf781fe29278e9b5524b7d3` / `0be72542ca1f99e9d60b64aac59a36727e3c6cf6` | Kaggle serial suite, `kurtvalcorza/dimer-nb2-ast-audio-classification` v3; Tesla T4 15,360 MiB; Python 3.12.13 | unchanged post-review E2E path, no repository checkout, clean Hugging Face cache, pinned install, digest-verified model download, base inference, generated dataset, split, adaptation, held-out evaluation, export, fresh reload | 225.6 s | **PASS** — 16/16 cells after one expected restart; five outputs preserved and hashed; [retained evidence](verification/2026-09-16-kaggle-t4/README.md) |
 | 2026-09-15 | `b939aa3cd30cbe334c43f87b96eb96ed8e16180e` / `3a99508abd3b3308174a5f8346e685fca771bbf4` | Kaggle serial suite, `kurtvalcorza/dimer-nb2-ast-audio-classification` v2; Tesla T4 15,360 MiB; Python 3.12.13 | unchanged default E2E path, no repository checkout, clean Hugging Face cache, pinned install, digest-verified model download, base inference, generated dataset, split, adaptation, held-out evaluation, export, fresh reload | 204.3 s | **PASS** — 16/16 cells after one expected restart; five outputs preserved and hashed; [retained evidence](verification/2026-09-16-kaggle-t4/README.md) |
 
 The installed notebook environment was PyTorch `2.14.0+cu130`, torchaudio `2.11.0+cu130`, and Transformers `4.57.6`. All four manifest-listed model files were downloaded from the immutable model revision and digest-verified. The six-clip synthetic held-out evaluation reported accuracy and macro-F1 `1.0`, compared with majority accuracy `0.3333`; the unseen generated biophony clip scored `0.987455`; the 19,103-byte classifier-head artifact reloaded over a fresh base instance with the same checked score. These are execution and sample-sanity observations, not field-recording or benchmark claims.
@@ -80,4 +81,4 @@ The historical run used PyTorch `2.14.0+cu130`, verified every snapshot digest, 
 
 ## Current status
 
-Clean Kaggle T4 execution evidence is recorded for the exact commit and notebook blob above. The notebook remains Candidate pending review of the retained evidence and an explicit integrator promotion decision. Optional BYOD branches were not exercised by this default-path run.
+Clean Kaggle T4 execution evidence is recorded for post-review commit `79543f3` and notebook blob `0be7254`. The notebook remains Candidate pending review of the retained evidence and an explicit integrator promotion decision. Optional BYOD branches were not exercised by this default-path run.

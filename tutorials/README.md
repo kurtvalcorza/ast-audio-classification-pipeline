@@ -8,7 +8,7 @@ Notebook specification: **DIMER Notebook Specification 2.0**. The notebook is a 
 
 | Notebook | Profile | Mode | Carrier | Capability | Default runtime | Samples | BYOD | Run-all | Release status |
 |---|---|---|---|---|---|---|---|---|---|
-| `ast_audio_classification_colab.ipynb` | `E2E` | `GUIDED` | standalone (generated) | pinned 527-label AudioSet inference, followed by a frozen-backbone three-class acoustic-ecology adaptation, held-out evaluation, classifier-head artifact export, fresh reload, and numerical parity check | CPU; CUDA used automatically | generated 24-clip balanced dataset, 18 train / 6 validation | optional single PCM WAV for base inference; optional bounded three-directory ZIP for adaptation; both off by default | verified — clean Kaggle T4 Run all recorded for commit `b939aa3`, blob `3a99508` (16/16 cells) | Candidate — clean-room execution recorded in [release verification](../docs/release-verification.md); promotion decision pending |
+| `ast_audio_classification_colab.ipynb` | `E2E` | `GUIDED` | standalone (generated) | pinned 527-label AudioSet inference, followed by a frozen-backbone three-class acoustic-ecology adaptation, held-out evaluation, classifier-head artifact export, fresh reload, and numerical parity check | CPU; CUDA used automatically | generated 24-clip balanced dataset, 18 train / 6 validation | optional single PCM WAV for base inference; optional bounded three-directory ZIP for adaptation; both off by default | verified — clean post-review Kaggle T4 Run all recorded for commit `79543f3`, blob `0be7254` (16/16 cells) | Candidate — clean-room execution recorded in [release verification](../docs/release-verification.md); promotion decision pending |
 
 ## Conformance notes
 

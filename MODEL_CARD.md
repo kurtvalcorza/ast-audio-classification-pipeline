@@ -120,7 +120,7 @@ Prohibited uses include covert surveillance, speaker or demographic profiling, f
 
 - Declared pins: `torch==2.14.0`, `torchvision==0.29.0`, `torchaudio==2.11.0`, `transformers==4.57.6`, `safetensors==0.8.0`, `numpy==2.5.3`, and `huggingface-hub==0.36.2`; Python `>=3.12,<3.13`.
 - Local CPU E2E pre-flight on 2026-09-16: all 16 generated code cells ran with the exact pins already installed; the real pinned base loaded, 86,187,264 backbone parameters were frozen, and the three-class head had 3,843 trainable parameters. Five cached-feature epochs over 18 records took 1.259 seconds in that warm-process run, held-out accuracy/macro-F1 were `1.0`/`1.0` on six generated clips, and the unseen generated biophony clip was classified as biophony.
-- Clean Kaggle Tesla T4 execution on 2026-09-15 UTC: immutable target `b939aa3`, notebook blob `3a99508`, Python 3.12.13, PyTorch `2.14.0+cu130`, 204.3 seconds total, one expected restart after installing pins, and 16/16 successful cells. The observed adapted metrics matched the local sample-sanity result.
+- Clean post-review Kaggle Tesla T4 execution on 2026-09-15 UTC: immutable target `79543f3`, notebook blob `0be7254`, Python 3.12.13, PyTorch `2.14.0+cu130`, 225.6 seconds total, one expected restart after installing pins, and 16/16 successful cells. The observed adapted metrics matched the local sample-sanity result.
 - The exported classifier-only artifact was approximately 19 KB. Loading it over a fresh base instance reproduced the checked three-class scores exactly.
 - Optional BYOD branches and generalisation to real field recordings remain unverified.
 

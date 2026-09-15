@@ -77,7 +77,7 @@ The unit suite is offline and uses injected or tiny models. A separate local CPU
 
 ## Release status
 
-**Candidate.** Source validation, 49 offline tests, local CPU pre-flight, and an unchanged clean Kaggle Tesla T4 run of the E2E notebook are recorded. The retained run verified commit `b939aa3` and notebook blob `3a99508`, then completed 16/16 cells after the expected dependency-install restart. Promotion remains a separate evidence-review decision. See `docs/release-verification.md`.
+**Candidate.** Source validation, 49 offline tests, local CPU pre-flight, and an unchanged clean Kaggle Tesla T4 run of the current E2E notebook are recorded. The post-review run verified commit `79543f3` and notebook blob `0be7254`, then completed 16/16 cells after the expected dependency-install restart. Promotion remains a separate evidence-review decision. See `docs/release-verification.md`.
 
 ## Licensing
 

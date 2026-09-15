@@ -1,0 +1,252 @@
+{
+ "identity": {
+  "repository": "ast-audio-classification-pipeline",
+  "candidate_sha": "79543f3bb5a745493cf781fe29278e9b5524b7d3",
+  "notebook": "tutorials/ast_audio_classification_colab.ipynb",
+  "committed_blob": "0be72542ca1f99e9d60b64aac59a36727e3c6cf6",
+  "fetched_blob_verified": true,
+  "kaggle_docker_image": "gcr.io/kaggle-gpu-images/python@sha256:37c64f7dd9c54116ecd1bcc88817c5469b88387388fade02bfa8bf3fc647d461",
+  "kaggle_run_type": "Batch",
+  "os": "Linux-6.12.90+-x86_64-with-glibc2.35",
+  "python": "3.12.13",
+  "cpu_count": 4,
+  "image_versions_before_run": {
+   "torch": "2.10.0+cu128",
+   "numpy": "2.0.2",
+   "transformers": "5.0.0",
+   "tokenizers": "0.22.2",
+   "safetensors": "0.7.0",
+   "huggingface-hub": "1.11.0",
+   "pillow": "11.3.0",
+   "nbclient": "0.10.2",
+   "ipykernel": "6.17.1"
+  },
+  "started": "2026-09-15T22:42:14Z",
+  "nvidia_smi": "Tesla T4, 15360 MiB, 580.159.04\nTesla T4, 15360 MiB, 580.159.04",
+  "hf_cache_clean_at_start": true
+ },
+ "runner": {
+  "ok": true,
+  "started": "2026-09-15T22:42:15Z",
+  "passes": [
+   {
+    "attempt": 1,
+    "started": "2026-09-15T22:42:15Z",
+    "ok": false,
+    "error": "CellExecutionError: ━━━━━━ 42.5/42.5 MB 41.4 MB/s eta 0:00:00\n----- stderr -----\nERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\nbigframes 2.39.0 requires google-cloud-bigquery-storage<3.0.0,>=2.30.0, which is not installed.\nydata-profiling 4.18.4 requires numpy<2.4,>=1.22, but you have numpy 2.5.3 which is incompatible.\ngoogle-colab 1.0.0 requires jupyter-server==2.14.0, but you have jupyter-server 2.12.5 which is incompatible.\ngoogle-colab 1.0.0 requires pandas==2.2.2, but you have pandas 2.3.3 which is incompatible.\ndopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.\nmoviepy 1.0.3 requires decorator<5.0,>=4.0.2, but you have decorator 5.3.1 which is incompatible.\nlibcuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\ncuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\ncuda-python 12.9.4 requires cuda-bindings~=12.9.4, but you have cuda-bindings 13.4.1 which is incompatible.\ncudf-cu12 26.2.1 requires cuda-toolkit[nvcc,nvrtc]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\nnumba 0.60.0 requires numpy<2.1,>=1.22, but you have numpy 2.5.3 which is incompatible.\nlibcuvs-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\nlibraft-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n------------------\n\n\u001b[0;31m---------------------------------------------------------------------------\u001b[0m\n\u001b[0;31mRuntimeError\u001b[0m                              Traceback (most recent call last)\n\u001b[0;32m/tmp/ipykernel_54/80829854.py\u001b[0m in \u001b[0;36m<cell line: 0>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     47\u001b[0m             \u001b[0mstale\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34mf'{distribution}: loaded={before}, installed={installed}'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     48\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mstale\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 49\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mRuntimeError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'Core dependencies changed while older modules were loaded: '\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m'; '\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mjoin\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mstale\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m'. Restart the runtime, then rerun from the top.'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     50\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     51\u001b[0m \u001b[0;32mimport\u001b[0m \u001b[0mtorch\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtorchaudio\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtransformers\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\n\u001b[0;31mRuntimeError\u001b[0m: Core dependencies changed while older modules were loaded: cuda-bindings: loaded=12.9.4, installed=13.4.1; numpy: loaded=2.0.2, installed=2.5.3. Restart the runtime, then rerun from the top.\n",
+    "wall_s": 176.5
+   },
+   {
+    "attempt": 2,
+    "started": "2026-09-15T22:45:12Z",
+    "ok": true,
+    "wall_s": 49.0
+   }
+  ],
+  "error": "CellExecutionError: ━━━━━━ 42.5/42.5 MB 41.4 MB/s eta 0:00:00\n----- stderr -----\nERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\nbigframes 2.39.0 requires google-cloud-bigquery-storage<3.0.0,>=2.30.0, which is not installed.\nydata-profiling 4.18.4 requires numpy<2.4,>=1.22, but you have numpy 2.5.3 which is incompatible.\ngoogle-colab 1.0.0 requires jupyter-server==2.14.0, but you have jupyter-server 2.12.5 which is incompatible.\ngoogle-colab 1.0.0 requires pandas==2.2.2, but you have pandas 2.3.3 which is incompatible.\ndopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.\nmoviepy 1.0.3 requires decorator<5.0,>=4.0.2, but you have decorator 5.3.1 which is incompatible.\nlibcuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\ncuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\ncuda-python 12.9.4 requires cuda-bindings~=12.9.4, but you have cuda-bindings 13.4.1 which is incompatible.\ncudf-cu12 26.2.1 requires cuda-toolkit[nvcc,nvrtc]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\nnumba 0.60.0 requires numpy<2.1,>=1.22, but you have numpy 2.5.3 which is incompatible.\nlibcuvs-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\nlibraft-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n------------------\n\n\u001b[0;31m---------------------------------------------------------------------------\u001b[0m\n\u001b[0;31mRuntimeError\u001b[0m                              Traceback (most recent call last)\n\u001b[0;32m/tmp/ipykernel_54/80829854.py\u001b[0m in \u001b[0;36m<cell line: 0>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     47\u001b[0m             \u001b[0mstale\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34mf'{distribution}: loaded={before}, installed={installed}'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     48\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mstale\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 49\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mRuntimeError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'Core dependencies changed while older modules were loaded: '\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m'; '\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mjoin\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mstale\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m'. Restart the runtime, then rerun from the top.'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     50\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     51\u001b[0m \u001b[0;32mimport\u001b[0m \u001b[0mtorch\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtorchaudio\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtransformers\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\n\u001b[0;31mRuntimeError\u001b[0m: Core dependencies changed while older modules were loaded: cuda-bindings: loaded=12.9.4, installed=13.4.1; numpy: loaded=2.0.2, installed=2.5.3. Restart the runtime, then rerun from the top.\n",
+  "traceback": "--\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 90.2/90.2 MB 19.9 MB/s eta 0:00:00\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.2/2.2 MB 50.8 MB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 214.1/214.1 MB 7.3 MB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.2/1.2 MB 1.0 MB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 59.5/59.5 MB 8.7 MB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 200.9/200.9 MB 9.1 MB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 145.9/145.9 MB 8.2 MB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 148.0/148.0 kB 132.4 kB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 7.2/7.2 MB 12.1 MB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 248.0/248.0 MB 7.4 MB/s eta 0:00:00\n----- stdout -----\n   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 42.5/42.5 MB 41.4 MB/s eta 0:00:00\n----- stderr -----\nERROR: pip's dependency resolver does not currently take into account all the packages that are installed. This behaviour is the source of the following dependency conflicts.\nbigframes 2.39.0 requires google-cloud-bigquery-storage<3.0.0,>=2.30.0, which is not installed.\nydata-profiling 4.18.4 requires numpy<2.4,>=1.22, but you have numpy 2.5.3 which is incompatible.\ngoogle-colab 1.0.0 requires jupyter-server==2.14.0, but you have jupyter-server 2.12.5 which is incompatible.\ngoogle-colab 1.0.0 requires pandas==2.2.2, but you have pandas 2.3.3 which is incompatible.\ndopamine-rl 4.1.2 requires gym<=0.25.2, but you have gym 0.26.2 which is incompatible.\nmoviepy 1.0.3 requires decorator<5.0,>=4.0.2, but you have decorator 5.3.1 which is incompatible.\nlibcuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\ncuml-cu12 26.2.0 requires cuda-toolkit[cublas,cufft,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\ncuda-python 12.9.4 requires cuda-bindings~=12.9.4, but you have cuda-bindings 13.4.1 which is incompatible.\ncudf-cu12 26.2.1 requires cuda-toolkit[nvcc,nvrtc]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\nnumba 0.60.0 requires numpy<2.1,>=1.22, but you have numpy 2.5.3 which is incompatible.\nlibcuvs-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\nlibraft-cu12 26.2.0 requires cuda-toolkit[cublas,curand,cusolver,cusparse]==12.*, but you have cuda-toolkit 13.0.3.0 which is incompatible.\n------------------\n\n\u001b[0;31m---------------------------------------------------------------------------\u001b[0m\n\u001b[0;31mRuntimeError\u001b[0m                              Traceback (most recent call last)\n\u001b[0;32m/tmp/ipykernel_54/80829854.py\u001b[0m in \u001b[0;36m<cell line: 0>\u001b[0;34m()\u001b[0m\n\u001b[1;32m     47\u001b[0m             \u001b[0mstale\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mappend\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34mf'{distribution}: loaded={before}, installed={installed}'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     48\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mstale\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 49\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mRuntimeError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'Core dependencies changed while older modules were loaded: '\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m'; '\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mjoin\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mstale\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m'. Restart the runtime, then rerun from the top.'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     50\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     51\u001b[0m \u001b[0;32mimport\u001b[0m \u001b[0mtorch\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtorchaudio\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mtransformers\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\n\u001b[0;31mRuntimeError\u001b[0m: Core dependencies changed while older modules were loaded: cuda-bindings: loaded=12.9.4, installed=13.4.1; numpy: loaded=2.0.2, installed=2.5.3. Restart the runtime, then rerun from the top.\n\n",
+  "restarted_after_install_cell": true,
+  "wall_s": 225.6,
+  "finished": "2026-09-15T22:46:01Z"
+ },
+ "cells": [
+  {
+   "cell": 3,
+   "status": "ok",
+   "started": "2026-09-15T22:45:13.325708Z",
+   "ended": "2026-09-15T22:45:26.890495Z",
+   "stdout_tail": "{'notebook_source': {'repository': 'ast-audio-classification-pipeline', 'repository_revision': '6796ae71d1333d36991c47337e53a9a79416f720', 'embedded_module': 'src/ast_audio_classification_pipeline/pipeline.py', 'embedded_modules': ['src/ast_audio_classification_pipeline/metrics.py', 'src/ast_audio_classification_pipeline/pipeline.py', 'src/ast_audio_classification_pipeline/samples.py'], 'module_sha256': '6c0373bf0366872b80d6a7ba5978607e52beab73d6dc8e7f88ea30f6b8f4a2bc', 'generator': 'build_notebook.py/2', 'notebook_spec': '2.0'}, 'python': '3.12.13', 'torch': '2.14.0+cu130', 'torchaudio': '2.11.0+cu130', 'transformers': '4.57.6', 'cuda': True}\n",
+   "error": null
+  },
+  {
+   "cell": 5,
+   "status": "ok",
+   "started": "2026-09-15T22:45:26.894453Z",
+   "ended": "2026-09-15T22:45:26.910665Z",
+   "stdout_tail": "",
+   "error": null
+  },
+  {
+   "cell": 7,
+   "status": "ok",
+   "started": "2026-09-15T22:45:26.914346Z",
+   "ended": "2026-09-15T22:45:26.975754Z",
+   "stdout_tail": "",
+   "error": null
+  },
+  {
+   "cell": 9,
+   "status": "ok",
+   "started": "2026-09-15T22:45:26.979187Z",
+   "ended": "2026-09-15T22:45:27.006268Z",
+   "stdout_tail": "",
+   "error": null
+  },
+  {
+   "cell": 11,
+   "status": "ok",
+   "started": "2026-09-15T22:45:27.009435Z",
+   "ended": "2026-09-15T22:45:53.016951Z",
+   "stdout_tail": "{'model_id': 'MIT/ast-finetuned-audioset-10-10-0.4593', 'revision': 'f826b80d28226b62986cc218e5cec390b1096902', 'license': 'bsd-3-clause', 'files': 4, 'total_bytes': 346433173}\nREADME.md: 0.00B [00:00, ?B/s]config.json: 0.00B [00:00, ?B/s]model.safetensors:   0%|          | 0.00/346M [00:00<?, ?B/s]preprocessor_config.json:   0%|          | 0.00/297 [00:00<?, ?B/s]{'weights_dir': '/content/weights/ast-audioset', 'fetched': ['README.md', 'config.json', 'model.safetensors', 'preprocessor_config.json']}\n{'verified_files': 4, 'revision': 'f826b80d28226b62986cc218e5cec390b1096902'}\n{'device': 'cuda:0', 'source': 'local-snapshot'}\n",
+   "error": null
+  },
+  {
+   "cell": 13,
+   "status": "ok",
+   "started": "2026-09-15T22:45:53.020856Z",
+   "ended": "2026-09-15T22:45:53.024992Z",
+   "stdout_tail": "{'python': '3.12.13', 'torch': '2.14.0+cu130', 'torchaudio': '2.11.0+cu130', 'transformers': '4.57.6', 'device': 'cuda:0', 'ceilings': {'SAMPLE_RATE': 16000, 'MIN_AUDIO_SECONDS': 0.025, 'MAX_AUDIO_SECONDS': 10.24, 'MAX_INPUT_SECONDS': 120.0, 'NUM_LABELS': 527}}\n",
+   "error": null
+  },
+  {
+   "cell": 15,
+   "status": "ok",
+   "started": "2026-09-15T22:45:53.028868Z",
+   "ended": "2026-09-15T22:45:53.292210Z",
+   "stdout_tail": "{'sample_kind': 'synthetic', 'name': 'synthetic_sine_440hz_3s.wav', 'samples': 48000, 'sample_rate': 16000, 'sha256': 'be7c8d33e0606949...', 'top_label': 'Sine wave', 'top_score': 0.8288, 'activation': 'sigmoid', 'truncated': False}\n   1. index 501  score 0.8288  Sine wave\n   2. index 393  score 0.0290  Dial tone\n   3. index 394  score 0.0204  Busy signal\n   4. index 481  score 0.0172  Beep, bleep\n   5. index 503  score 0.0171  Chirp tone\n",
+   "error": null
+  },
+  {
+   "cell": 17,
+   "status": "ok",
+   "started": "2026-09-15T22:45:53.296108Z",
+   "ended": "2026-09-15T22:45:53.479762Z",
+   "stdout_tail": "{\n  \"schema\": {\n    \"input\": \"1-D float numpy array of mono samples in [-1, 1], plus the sample_rate it was captured at\",\n    \"sample_rate_hz\": \"any positive int; resampled to SAMPLE_RATE=16000 when it differs\",\n    \"duration_seconds\": [\n      0.025,\n      120.0\n    ],\n    \"model_window_seconds\": 10.24,\n    \"top_k\": [\n      1,\n      527\n    ],\n    \"preprocessing\": \"resample to 16000 Hz when needed, 128-bin Kaldi fbank with a 10 ms hop, pad or crop to 1024 frames (10.24 s)\"\n  },\n  \"inputs\": [\n    {\n      \"id\": \"synthetic_sine_440hz_3s.wav\",\n      \"samples\": 48000,\n      \"dtype\": \"float32\",\n      \"duration_seconds\": 3.0,\n      \"peak_amplitude\": 0.5,\n      \"will_resample\": false,\n      \"will_truncate\": false\n    }\n  ],\n  \"sample_rate\": 16000,\n  \"top_k\": 5,\n  \"n_clips\": 1,\n  \"verdict\": \"accepted\",\n  \"findings\": [\n    {\n      \"input\": \"over-long-probe\",\n      \"verdict\": \"rejected\",\n      \"message\": \"audio is 121.00 s; ceiling is 120.0 s (chunk it first)\"\n    }\n  ],\n  \"model_id\": \"MIT/ast-finetuned-audioset-10-10-0.4593\",\n  \"model_revision\": \"f826b80d28226b62986cc218e5cec390b1096902\",\n  \"dataset_representation\": \"io.github.kurtvalcorza.dataset.audio.waveform-classification.v1\",\n  \"dataset_records\": 24,\n  \"class_counts\": {\n    \"geophony\": 8,\n    \"biophony\": 8,\n    \"anthrophony\": 8\n  }\n}\n",
+   "error": null
+  },
+  {
+   "cell": 19,
+   "status": "ok",
+   "started": "2026-09-15T22:45:53.483528Z",
+   "ended": "2026-09-15T22:45:53.489354Z",
+   "stdout_tail": "{'split': 'stratified_75_25', 'train_samples': 18, 'val_samples': 6, 'train_counts': {'geophony': 6, 'biophony': 6, 'anthrophony': 6}, 'val_counts': {'geophony': 2, 'biophony': 2, 'anthrophony': 2}}\n",
+   "error": null
+  },
+  {
+   "cell": 21,
+   "status": "ok",
+   "started": "2026-09-15T22:45:53.492521Z",
+   "ended": "2026-09-15T22:45:53.975076Z",
+   "stdout_tail": "{'stage': 'reheaded_pre_adaptation', 'classes': ['geophony', 'biophony', 'anthrophony'], 'frozen_backbone_parameters': 86187264, 'pre_adaptation_accuracy': 0.0, 'majority_baseline_accuracy': 0.3333}\n",
+   "error": null
+  },
+  {
+   "cell": 23,
+   "status": "ok",
+   "started": "2026-09-15T22:45:53.979212Z",
+   "ended": "2026-09-15T22:45:55.900654Z",
+   "stdout_tail": "Epoch 1/5: train_loss=1.1387  val_acc=1.0000\nEpoch 2/5: train_loss=0.1560  val_acc=1.0000\nEpoch 3/5: train_loss=0.0323  val_acc=1.0000\nEpoch 4/5: train_loss=0.0096  val_acc=1.0000\nEpoch 5/5: train_loss=0.0041  val_acc=1.0000\n",
+   "error": null
+  },
+  {
+   "cell": 25,
+   "status": "ok",
+   "started": "2026-09-15T22:45:55.904268Z",
+   "ended": "2026-09-15T22:45:56.353705Z",
+   "stdout_tail": "ion\",\n  \"score_semantics\": \"softmax probability distribution over target classes\",\n  \"sample_kind\": \"synthetic_heldout\",\n  \"n_clips\": 6,\n  \"classes\": [\n    \"geophony\",\n    \"biophony\",\n    \"anthrophony\"\n  ],\n  \"metrics\": {\n    \"accuracy\": 1.0,\n    \"macro_f1\": 1.0,\n    \"per_class\": {\n      \"geophony\": {\n        \"precision\": 1.0,\n        \"recall\": 1.0,\n        \"f1\": 1.0,\n        \"support\": 2\n      },\n      \"biophony\": {\n        \"precision\": 1.0,\n        \"recall\": 1.0,\n        \"f1\": 1.0,\n        \"support\": 2\n      },\n      \"anthrophony\": {\n        \"precision\": 1.0,\n        \"recall\": 1.0,\n        \"f1\": 1.0,\n        \"support\": 2\n      }\n    },\n    \"confusion_matrix\": [\n      [\n        2,\n        0,\n        0\n      ],\n      [\n        0,\n        2,\n        0\n      ],\n      [\n        0,\n        0,\n        2\n      ]\n    ],\n    \"baseline\": {\n      \"majority_class_index\": 2,\n      \"majority_class_count\": 2,\n      \"majority_class_accuracy\": 0.3333,\n      \"num_classes\": 3,\n      \"n_samples\": 6\n    },\n    \"accuracy_delta_vs_baseline\": 0.6667,\n    \"num_samples\": 6,\n    \"num_classes\": 3\n  },\n  \"baseline\": {\n    \"majority_class_index\": 2,\n    \"majority_class_count\": 2,\n    \"majority_class_accuracy\": 0.3333,\n    \"num_classes\": 3,\n    \"n_samples\": 6\n  },\n  \"verdict\": \"sample-sanity\",\n  \"reason\": \"6 held-out clip(s) evaluated against majority baseline; not a benchmark claim\",\n  \"model_id\": \"MIT/ast-finetuned-audioset-10-10-0.4593\",\n  \"model_revision\": \"f826b80d28226b62986cc218e5cec390b1096902\"\n}\n",
+   "error": null
+  },
+  {
+   "cell": 27,
+   "status": "ok",
+   "started": "2026-09-15T22:45:56.357711Z",
+   "ended": "2026-09-15T22:45:56.435553Z",
+   "stdout_tail": "{'test_clip': 'unseen_synthetic_biophony_99', 'predicted_label': 'biophony', 'predicted_score': 0.9875, 'activation': 'softmax'}\n   1. index  1  score 0.9875  biophony\n   2. index  2  score 0.0118  anthrophony\n   3. index  0  score 0.0007  geophony\n",
+   "error": null
+  },
+  {
+   "cell": 29,
+   "status": "ok",
+   "started": "2026-09-15T22:45:56.438947Z",
+   "ended": "2026-09-15T22:45:56.444671Z",
+   "stdout_tail": "{'saved_artifact': 'outputs/ast-audio-adapter-v1.pt', 'bytes': 19103, 'format': 'org.valcorza.ast-audio.adapter.v1'}\n",
+   "error": null
+  },
+  {
+   "cell": 31,
+   "status": "ok",
+   "started": "2026-09-15T22:45:56.447861Z",
+   "ended": "2026-09-15T22:45:57.606047Z",
+   "stdout_tail": "{'reload_verification': 'PASSED', 'original_top_score': 0.987455, 'reloaded_top_score': 0.987455, 'labels': ['geophony', 'biophony', 'anthrophony']}\n",
+   "error": null
+  },
+  {
+   "cell": 33,
+   "status": "ok",
+   "started": "2026-09-15T22:45:57.609407Z",
+   "ended": "2026-09-15T22:45:57.614582Z",
+   "stdout_tail": "['ast-audio-adapter-v1.pt', 'ast_audio_classification_evaluation_report.json', 'ast_audio_classification_input_manifest.json', 'ast_audio_classification_result.json', 'ast_audio_classification_top_k.csv']\n",
+   "error": null
+  }
+ ],
+ "preserved_outputs": {
+  "ast-audio-adapter-v1.pt": {
+   "bytes": 19103,
+   "sha256": "15d8ccaca37dc015e4aa211d18215a5a007329e55aec96a009e25fd4af29c911"
+  },
+  "ast_audio_classification_evaluation_report.json": {
+   "bytes": 1551,
+   "sha256": "ff241157258cb25667afb0b88d01400e418b3f251da6835dfd057376d1ac1eb8"
+  },
+  "ast_audio_classification_input_manifest.json": {
+   "bytes": 1300,
+   "sha256": "1446278e9a83b3d6875afc7f2b99ffa9f4818acae4ac7d3c81b6c6dc19aec249"
+  },
+  "ast_audio_classification_result.json": {
+   "bytes": 5452,
+   "sha256": "afaae0bd1bd3652d59b3ccb3d2f283a878f44f1fff237c9597aa4bf6268a78a5"
+  },
+  "ast_audio_classification_top_k.csv": {
+   "bytes": 161,
+   "sha256": "d930eef1c30aa6dd278bfec0cf243bcaa77e367b860a8ee9bc8d97baba09cdbb"
+  }
+ },
+ "staged_weights": [
+  {
+   "path": "ast-audioset/README.md",
+   "bytes": 1165
+  },
+  {
+   "path": "ast-audioset/config.json",
+   "bytes": 26763
+  },
+  {
+   "path": "ast-audioset/dimer-base-manifest.json",
+   "bytes": 851
+  },
+  {
+   "path": "ast-audioset/model.safetensors",
+   "bytes": 346404948
+  },
+  {
+   "path": "ast-audioset/preprocessor_config.json",
+   "bytes": 297
+  },
+  {
+   "path": "ast-audioset/.cache/huggingface/.gitignore",
+   "bytes": 1
+  },
+  {
+   "path": "ast-audioset/.cache/huggingface/download/README.md.metadata",
+   "bytes": 101
+  },
+  {
+   "path": "ast-audioset/.cache/huggingface/download/config.json.metadata",
+   "bytes": 100
+  },
+  {
+   "path": "ast-audioset/.cache/huggingface/download/model.safetensors.metadata",
+   "bytes": 124
+  },
+  {
+   "path": "ast-audioset/.cache/huggingface/download/preprocessor_config.json.metadata",
+   "bytes": 100
+  }
+ ],
+ "executor_torch_after_run": {
+  "torch": "2.14.0+cu130",
+  "cuda": "13.0",
+  "device": "Tesla T4"
+ },
+ "finished": "2026-09-15T22:46:03Z"
+}
