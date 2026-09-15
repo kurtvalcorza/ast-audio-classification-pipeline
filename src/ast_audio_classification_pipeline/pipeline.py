@@ -197,6 +197,12 @@ def evaluation_report(
     sample_kind: str = "synthetic",
 ) -> dict[str, Any]:
     """Describe the unadapted AudioSet inference result without inventing ground truth."""
+    activation = result.get("activation", ACTIVATION)
+    if activation != ACTIVATION:
+        raise ValueError(
+            "evaluation_report only supports unadapted AudioSet sigmoid results; "
+            f"got activation={activation!r}"
+        )
     predictions = result["predictions"]
     reason = "no AudioSet-labelled ground truth exists for the evaluated clip"
     if targets is not None:
@@ -208,7 +214,7 @@ def evaluation_report(
     return {
         "task": "multi-label audio event classification over the 527 AudioSet labels",
         "score_semantics": (
-            f"independent {result.get('activation', ACTIVATION)} score per label: the scores do not sum "
+            f"independent {activation} score per label: the scores do not sum "
             "to one, several labels can be high at once, none is a calibrated probability, and no "
             "threshold is shipped"
         ),
@@ -231,12 +237,14 @@ def evaluation_report(
     }
 
 
-def rehead_model(
+def _build_reheaded_classifier(
     model: Any,
     class_names: Sequence[str],
     seed: int = 42,
-) -> None:
-    """Dynamically replace ASTMLPHead dense layer with a new linear classifier sized to class_names."""
+) -> tuple[Any, list[str]]:
+    """Build a re-headed classifier without mutating the live model."""
+    import copy
+
     import torch
     import torch.nn as nn
 
@@ -245,19 +253,36 @@ def rehead_model(
         raise ValueError("class_names must contain at least 2 non-empty names")
     if len(set(names)) != len(names):
         raise ValueError("class_names must be unique")
-    previous_dense = model.classifier.dense
+    classifier = copy.deepcopy(model.classifier)
+    previous_dense = classifier.dense
     with torch.random.fork_rng(devices=[]):
         torch.manual_seed(seed)
         new_dense = nn.Linear(previous_dense.in_features, len(names), bias=True)
         nn.init.kaiming_normal_(new_dense.weight, nonlinearity="linear")
         nn.init.zeros_(new_dense.bias)
     new_dense = new_dense.to(device=previous_dense.weight.device, dtype=previous_dense.weight.dtype)
-    model.classifier.dense = new_dense
+    classifier.dense = new_dense
+    return classifier, names
+
+
+def _set_class_metadata(model: Any, names: Sequence[str]) -> None:
+    """Update model label metadata after a classifier replacement succeeds."""
     model.num_labels = len(names)
     model.config.num_labels = len(names)
     model.config.id2label = dict(enumerate(names))
     model.config.label2id = {name: i for i, name in enumerate(names)}
     model.config.problem_type = "single_label_classification"
+
+
+def rehead_model(
+    model: Any,
+    class_names: Sequence[str],
+    seed: int = 42,
+) -> None:
+    """Dynamically replace ASTMLPHead dense layer with a new linear classifier sized to class_names."""
+    classifier, names = _build_reheaded_classifier(model, class_names, seed=seed)
+    model.classifier = classifier
+    _set_class_metadata(model, names)
 
 
 def freeze_backbone(model: Any) -> int:
@@ -570,16 +595,26 @@ class ASTAudioClassificationPipeline:
         class_names = payload.get("class_names")
         if not isinstance(class_names, list) or payload.get("num_classes") != len(class_names):
             raise ValueError("artifact class_names and num_classes are inconsistent")
-        rehead_model(self.model, class_names)
+        if any(not isinstance(name, str) or not name.strip() for name in class_names):
+            raise ValueError("artifact class_names must contain non-empty strings")
+        if len(class_names) < 2 or len(set(class_names)) != len(class_names):
+            raise ValueError("artifact class_names must contain at least 2 unique names")
         classifier_state = payload.get("classifier_state_dict")
         if not isinstance(classifier_state, dict):
             raise ValueError("artifact classifier_state_dict must be a dict")
-        self.model.classifier.load_state_dict(classifier_state, strict=True)
-        self.labels = list(class_names)
-        self.activation = "softmax"
         adaptation = payload.get("adaptation", {})
         if not isinstance(adaptation, dict):
             raise ValueError("artifact adaptation metadata must be a dict")
+
+        # Build and validate off to the side so a rejected artifact cannot leave
+        # the live pipeline with a partially replaced classifier.
+        classifier, normalized_names = _build_reheaded_classifier(self.model, class_names)
+        classifier.load_state_dict(classifier_state, strict=True)
+
+        self.model.classifier = classifier
+        _set_class_metadata(self.model, normalized_names)
+        self.labels = normalized_names
+        self.activation = "softmax"
         self.adaptation_config = dict(adaptation)
         self.model.to(self.device).eval()
         self._refresh_runner()
@@ -601,12 +636,15 @@ class ASTAudioClassificationPipeline:
         self,
         audio: np.ndarray,
         sample_rate: int,
-        top_k: int = DEFAULT_TOP_K,
+        top_k: int | None = None,
     ) -> dict[str, Any]:
         """Classify one clip. `audio` is a 1-D float array; `sample_rate` is the rate it was captured at."""
-        duration = _check_inputs(audio, sample_rate, top_k)
-        if top_k > len(self.labels):
-            raise ValueError(f"top_k={top_k} exceeds the active label count ({len(self.labels)})")
+        resolved_top_k = min(DEFAULT_TOP_K, len(self.labels)) if top_k is None else top_k
+        duration = _check_inputs(audio, sample_rate, resolved_top_k)
+        if resolved_top_k > len(self.labels):
+            raise ValueError(
+                f"top_k={resolved_top_k} exceeds the active label count ({len(self.labels)})"
+            )
         waveform = audio.astype(np.float32, copy=False)
         resampled = sample_rate != SAMPLE_RATE
         if resampled:
@@ -622,7 +660,7 @@ class ASTAudioClassificationPipeline:
             scores = exp_scores / np.sum(exp_scores)
         else:
             raise RuntimeError(f"unsupported activation: {self.activation}")
-        order = np.argsort(-scores)[:top_k]
+        order = np.argsort(-scores)[:resolved_top_k]
         return {
             "predictions": [
                 {"label": self.labels[int(i)], "index": int(i), "score": float(scores[i])} for i in order

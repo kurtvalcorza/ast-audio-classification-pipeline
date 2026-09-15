@@ -111,3 +111,10 @@ def test_audioset_evaluation_report_rejects_unaligned_target_claims() -> None:
 def test_evaluation_report_carries_the_truncation_flag() -> None:
     assert evaluation_report(_result(truncated=True))["truncated"] is True
     assert evaluation_report(_result())["truncated"] is False
+
+
+def test_evaluation_report_rejects_adapted_softmax_results() -> None:
+    result = _result()
+    result["activation"] = "softmax"
+    with pytest.raises(ValueError, match="only supports unadapted AudioSet sigmoid results"):
+        evaluation_report(result)

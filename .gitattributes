@@ -4,5 +4,10 @@ docs/verification/2026-09-13/** -text
 # Python csv.writer exports CRLF; keep the original bytes and accept its CR terminator
 docs/verification/2026-09-13/outputs/*.csv whitespace=cr-at-eol
 
+# Kaggle serial-suite evidence is digest-verified and must remain byte-exact.
+docs/verification/2026-09-16-kaggle-t4/** -text
+# Python csv.writer exports CRLF; keep the original bytes and accept its CR terminator.
+docs/verification/2026-09-16-kaggle-t4/**/outputs/*.csv whitespace=cr-at-eol
+
 # Snapshot files are digest-verified byte-for-byte against dimer-base-manifest.json; never convert their line endings.
 weights/** -text

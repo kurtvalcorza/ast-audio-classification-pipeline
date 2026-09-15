@@ -11,6 +11,8 @@ from ast_audio_classification_pipeline import (
     ADAPT_CLASSES,
     ARTIFACT_FORMAT,
     DATASET_REPRESENTATION,
+    MODEL_ID,
+    MODEL_REVISION,
     ASTAudioClassificationPipeline,
     confusion_matrix,
     evaluate_classification,
@@ -362,3 +364,55 @@ def test_artifact_safe_reload_rejects_corrupted_payload(tmp_path):
     )
     with pytest.raises(ValueError, match="artifact_kind"):
         pipe.load_artifact(bad_artifact)
+
+
+def test_artifact_rejection_does_not_mutate_live_classifier(tmp_path):
+    config = ASTConfig(num_labels=527)
+    model = ASTForAudioClassification(config)
+    original_classifier = model.classifier
+    pipe = ASTAudioClassificationPipeline(
+        _runner=lambda w: np.zeros(527, dtype=np.float32),
+        labels=[f"label-{i}" for i in range(527)],
+        device="cpu",
+        model=model,
+        extractor=object(),
+    )
+    bad_artifact = tmp_path / "bad-state.pt"
+    torch.save(
+        {
+            "format": ARTIFACT_FORMAT,
+            "format_version": "1.0",
+            "artifact_kind": "classifier-head-adapter",
+            "base_model_id": MODEL_ID,
+            "base_model_revision": MODEL_REVISION,
+            "class_names": list(ADAPT_CLASSES),
+            "num_classes": len(ADAPT_CLASSES),
+            "activation": "softmax",
+            "adaptation": {},
+            "classifier_state_dict": {},
+        },
+        bad_artifact,
+    )
+
+    with pytest.raises(RuntimeError, match="Missing key"):
+        pipe.load_artifact(bad_artifact)
+
+    assert pipe.model.classifier is original_classifier
+    assert pipe.model.config.num_labels == 527
+    assert pipe.activation == "sigmoid"
+    assert len(pipe.labels) == 527
+
+
+def test_adapted_predict_default_uses_active_label_count():
+    pipe = ASTAudioClassificationPipeline(
+        _runner=lambda w: np.array([0.1, 0.2, 0.3], dtype=np.float32),
+        labels=list(ADAPT_CLASSES),
+        device="cpu",
+        activation="softmax",
+    )
+    audio = np.zeros(16_000, dtype=np.float32)
+
+    result = pipe.predict(audio, 16_000)
+    assert len(result["predictions"]) == len(ADAPT_CLASSES)
+    with pytest.raises(ValueError, match="exceeds the active label count"):
+        pipe.predict(audio, 16_000, top_k=5)
