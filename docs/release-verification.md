@@ -1,117 +1,75 @@
 # Release verification
 
-`tutorials/ast_audio_classification_colab.ipynb` (`TASK-INFERENCE`, **standalone** carrier) remains a **release candidate**. A clean Python 3.12 GPU execution of the exact notebook blob was recorded on 2026-09-13; the result and retained artifacts are below. Static checks are not runtime evidence, and promotion still requires a reviewer to accept the recorded run.
+`tutorials/ast_audio_classification_colab.ipynb` is a standalone `E2E` Candidate. The current revision has source checks and local CPU evidence only. The 2026-09-13 clean GPU record belongs to an older inference-only notebook and does not satisfy the execution gate for this changed workflow.
 
-## Automatic coverage (static, every pull request)
+## Automatic coverage
 
-CI runs `tools/validate_release_assets.py`, which checks:
+CI and the local validator check that:
 
-- notebook JSON parses; every code cell compiles as plain Python (no `%`/`!` magics); no
-  persisted outputs or execution counts; no unresolved placeholder markers; every code cell
-  is preceded by an explanatory markdown cell;
-- exactly one tutorial notebook, named in `tutorials/README.md` with its `TASK-INFERENCE`
-  profile, the notebook-spec version and the standalone carrier; `metadata.dimer` declares that profile, spec
-  `1.1`, `standalone: true` and `generated_from` (repository, generating revision, module SHA-256, generator);
-- the standalone carrier (ST1–ST6, PAR1–PAR3): no clone, repository install or repository import on the primary
-  path; exactly one cell tagged `embedded_module` equal to `src/ast_audio_classification_pipeline/pipeline.py`
-  after the generator's documented rewrites; the inline `MANIFEST` equal to the committed snapshot manifest and
-  the inline `PINS` equal to the `pyproject.toml` runtime pins; the notebook byte-identical to
-  `tools/build_notebook.py` output; the pinned-install cell with its restart-on-stale-import guard;
-  `NOTEBOOK_SOURCE` recorded in the exports;
-- `MODEL_ID`/`MODEL_REVISION` are bound only in the carried module cell (and repeated in the inline manifest,
-  which the notebook asserts against the module before fetching), the revision is
-  a 40-hex immutable commit, and the same identity string appears in `README.md`,
-  `MODEL_CARD.md`, and `docs/WEIGHTS.md` with no stray revisions;
-- the profile-specific public-API calls (`stage_missing_files`, `verify_snapshot`,
-  `ASTAudioClassificationPipeline.from_pretrained(weights_dir=...)`, `validate_inputs`,
-  `predict(audio, sample_rate=..., top_k=5)`, `evaluation_report`), the ceiling print (`SAMPLE_RATE`,
-  `MIN_AUDIO_SECONDS`, `MAX_AUDIO_SECONDS`, `MAX_INPUT_SECONDS`, `NUM_LABELS`), the truncation flag read from
-  the input manifest, the four exports, the learner-facing statements (independent sigmoid, not a
-  calibrated probability, no shipped threshold, rank-ordered scores, always `not-measurable`) and the gated-off
-  BYOD default listed in the validator; forbidden patterns (credential-in-URL, any `git clone` / `github.com` /
-  repository import on the primary path, a mutable `revision='main'`, direct
-  `from transformers import` / `ASTForAudioClassification` / `ASTFeatureExtractor` /
-  `torchaudio.functional.resample(` / `from huggingface_hub import` use **outside the carried module cell**,
-  `trust_remote_code=True`, `pickle.load`, `torch.load(`, `extractall(`);
-- `STATUS.md`, `README.md` and `tutorials/README.md` agree on one release-status token and no
-  document makes an unsupported release-grade, production-readiness or benchmark claim;
-- `MODEL_CARD.md` front matter, single H1, required heading order, and immutable provenance.
+- notebook JSON parses, code cells compile, outputs and execution counts are cleared, explanatory markdown precedes code, and `metadata.dimer` declares Notebook Specification 2.0, profile `E2E`, mode `GUIDED`, standalone generation metadata, and module hashes;
+- the notebook is byte-identical to `tools/build_notebook.py` output and carries repository-matching `metrics.py`, `samples.py`, and `pipeline.py`, immutable model identity, snapshot manifest, and dependency pins;
+- the default path uses public pipeline APIs for base inference, dataset generation and validation, stratified splitting, re-heading, freezing, fine-tuning, evaluation, artifact export, safe reload, and adapted inference;
+- both upload gates default off, prohibited direct-library and unsafe deserialization patterns stay outside learner code, and the archive path has bounded member, compressed-size, expanded-size, path, encoding, sample-rate, duration, and class checks;
+- the five expected outputs are named: input manifest, evaluation report, result/provenance JSON, rank-ordered CSV, and classifier-head adapter;
+- `README.md`, `STATUS.md`, this document, the tutorial registry, model card, weight documentation, and package constants agree on identity and Candidate status;
+- the offline tests and lint pass.
 
-CI also installs the pinned CPU-only `torch`/`torchaudio` wheels plus `transformers`, runs `ruff`,
-`tools/build_notebook.py --check`, and the offline unit suite (`tests/test_pipeline.py`,
-`tests/test_role_helpers.py`, `tests/test_notebook_parity.py`; injected runner, no weights). These are
-source/provenance and unit checks. They are **not** execution evidence.
+These are source and unit checks, not supported-runtime execution evidence.
 
 ## Executor paths
 
 | Path | Runtime | Role |
 |---|---|---|
-| Google Colab (supported user path) | Colab CPU runtime (CUDA used automatically when present) | The runtime the tutorial is written for; a clean top-to-bottom run here is promotion evidence |
-| Kaggle CLI kernel | Kaggle CPU kernel, Python 3.12 image | Reproducible clean-room executor of the same class; the notebook is pushed verbatim plus one leading shim cell that provides `google.colab` and chdirs to a scratch directory (no repository checkout is needed — the notebook is standalone) |
-| Local WSL harness (pre-flight only) | Workstation, sequential cell executor with a `google.colab` shim | Builder pre-flight to catch defects before spending cloud runs; **not** a supported runtime and not promotion evidence |
+| Google Colab | fresh Python 3.12 runtime, CPU or CUDA | primary supported tutorial path and promotion evidence |
+| Kaggle notebook executor | fresh Python 3.12 image with a minimal `google.colab` upload shim | equivalent clean-room path for the standalone notebook |
+| Local Windows/WSL harness | pinned project environment, sequential or direct API execution | pre-flight only; useful for defect discovery and measurements, not promotion |
 
 ## Supported release verification procedure
 
-Before changing the registry status from `Candidate` to `Release-grade`:
+Before promotion:
 
-1. resolve the exact PR/commit head under review and confirm static CI is green;
-2. open that exact notebook revision in a new CPU (or CUDA) runtime (Colab, or the Kaggle
-   executor above) with **no repository checkout** and a clean model cache;
-3. run the notebook top-to-bottom without editing implementation cells (form parameters at their
-   defaults for the sample path: `USE_BYOD = False`);
-4. verify that Section 1 reports `NOTEBOOK_SOURCE.repository_revision` equal to the revision recorded in
-   `metadata.dimer.generated_from` and that the installed core package versions equal the inline `PINS`
-   (= `pyproject.toml`);
-5. verify every default-path stage completes:
-   - pinned runtime installed from the inline `PINS` with no GitHub access;
-   - the carried module cell executes (defines the pipeline class and both role helpers) with no import of the
-     repository package;
-   - synthetic 3 s, 440 Hz, amplitude-0.5 float32 sine at 16 kHz generated in code with its
-     SHA-256 printed, and the ceilings
-     (`SAMPLE_RATE` 16000, `MIN_AUDIO_SECONDS` 0.025, `MAX_AUDIO_SECONDS` 10.24, `MAX_INPUT_SECONDS` 120.0,
-     `NUM_LABELS` 527) surfaced;
-   - pinned `MIT/ast-finetuned-audioset-10-10-0.4593` acquisition at the immutable revision
-     through the package: the inline `MANIFEST` is asserted against the module identity and written to
-     `weights/ast-audioset/`, `stage_missing_files(WEIGHTS_DIR, allow_download=True)` reports all four
-     manifest entries (`README.md`, `config.json`, `model.safetensors`, `preprocessor_config.json`) on a clean
-     runtime, `verify_snapshot` returns the manifest dict, and
-     `from_pretrained(weights_dir=WEIGHTS_DIR)` loads with `local_files_only=True`;
-   - `validate_inputs` writes `outputs/ast_audio_classification_input_manifest.json` (verdict `accepted`,
-     `will_truncate: false`, `will_resample: false`, one recorded rejection finding from the over-long probe);
-   - classification through `predict(audio, sample_rate=sample_rate, top_k=5)` with
-     `activation == 'sigmoid'`, `truncated == False`, `resampled == False`, and a rank-ordered
-     top-5 list; record the top label and score (the card-pass smoke on CUDA ranked `Sine wave`
-     first at 0.84 — a different top label on CPU is a finding to record, not a failure by itself,
-     because no expected metric is asserted);
-   - `evaluation_report` writes `outputs/ast_audio_classification_evaluation_report.json` with verdict
-     `not-measurable` (no metric helper, no ground truth), stated as such;
-   - `outputs/ast_audio_classification_result.json` and `outputs/ast_audio_classification_top_k.csv`
-     written with `NOTEBOOK_SOURCE`, model revision, model licence, runtime versions and device;
-6. verify the exports exist and the interpretation section matches the observed path;
-7. record the notebook Git blob id, commit, runtime (platform, Python, PyTorch, torchaudio,
-   Transformers, device), model identifier and immutable revision, whether the model cache was
-   clean, outcome, produced outputs, and any warning or applicable `SHOULD` deviation in the table
-   below;
-8. record no access tokens or other secrets.
+1. Resolve the exact commit and notebook Git blob under review. Confirm the generator, validator, lint, and full unit suite pass at that revision.
+2. Start a fresh supported Python 3.12 runtime with no repository checkout and a clean model cache. Run the exact generated notebook from top to bottom without editing implementation cells. Keep `USE_BYOD = False` and `USE_BYOD_DATASET = False` for the qualifying default path.
+3. Confirm the runtime pins and `NOTEBOOK_SOURCE.repository_revision` match the notebook metadata.
+4. Confirm all 14 stages complete:
+   - install the pinned environment;
+   - execute the three carried package modules;
+   - write and validate the immutable model manifest;
+   - print runtime versions, device, and audio ceilings;
+   - load the verified `MIT/ast-finetuned-audioset-10-10-0.4593` revision and demonstrate unchanged 527-label independent-sigmoid inference;
+   - generate and validate 24 balanced `geophony`, `biophony`, and `anthrophony` records under `io.github.kurtvalcorza.dataset.audio.waveform-classification.v1`, while recording the expected rejected over-long probe;
+   - create a seeded, disjoint, stratified 18/6 train/validation split;
+   - install the seeded three-class head, freeze the transformer backbone, and record the pre-adaptation result and majority baseline;
+   - cache frozen backbone features and run five classifier-head epochs at batch size 4 and learning rate `1e-3`;
+   - evaluate the held-out split with accuracy, macro-F1, per-class metrics, confusion matrix, and baseline delta;
+   - classify the newly generated unseen biophony clip with three-class softmax scores;
+   - export the classifier-only `org.valcorza.ast-audio.adapter.v1` artifact;
+   - load the artifact safely over a fresh pinned base instance and pass the numerical score comparison at `rtol=1e-5`, `atol=1e-6`;
+   - write the complete output and provenance bundle.
+5. Verify the adapter does not contain the frozen backbone and records the ordered classes, base model ID and revision, activation, artifact version, and training configuration.
+6. Retain the notebook blob, source commit, executor, Python and package versions, device, clean-cache state, cell-by-cell outcome, duration, output files and hashes, measured metrics, artifact size, reload delta, warnings, and cleanup evidence. Do not retain access tokens.
+7. Treat any failing default-path cell, missing output, identity mismatch, unsafe load, or failed reload comparison as a release blocker. Review the evidence before changing status.
 
-A known-failing default path in the supported runtime blocks release.
+Optional single-WAV and dataset-ZIP branches should be tested separately. Their failure does not alter what the default-path run exercised, but a known defect must be recorded and repaired before claiming those branches are supported.
 
 ## Recorded executions
 
-Notebook identity is the Git blob of `tutorials/ast_audio_classification_colab.ipynb` at the source commit in the row below. The documentation commit recording the run does not change that notebook blob. Cell wall time is the sum of recorded code-cell times, including installation and model downloads; total time additionally includes environment setup and bookkeeping. These measurements describe this one run.
+### Current E2E pre-flight
 
-### Manual clean-runtime evidence
+| Date | Source | Executor | Path | Observations | Qualification |
+|---|---|---|---|---|---|
+| 2026-09-16 | local uncommitted `feat/ast-e2e-finetuning` working tree | Windows, Python 3.12, CPU, pinned local snapshot and exact dependencies preinstalled | all 16 generated notebook code cells, including carried modules, base inference, generate, split, re-head, freeze, adapt, evaluate, unseen predict, export, and fresh reload | 24 clips; 18/6 split; 5 epochs; 25 optimizer steps; 1.259 s adaptation in the warm process; held-out accuracy 1.0 and macro-F1 1.0; majority baseline 0.3333; unseen biophony predicted correctly at 0.9874; 19,103-byte artifact; reload maximum absolute score difference 0 | pre-flight only; installation was intentionally skipped, and this is not a fresh supported-runtime run |
+
+This evidence verifies the real model path locally and guided the bounded default schedule. It does not show generalisation to field recordings and cannot support a benchmark claim.
+
+### Historical inference-only evidence
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Cell wall / total | Outcome |
 |---|---|---|---|---|---|
-| 2026-09-13 | `749fbf6b9a87bbf67394aad2e338252d29d5910b` / `59edb7e523cd419cd64e49624e793d9de205b033` | Colab CLI → fresh Python 3.12.3 venv/interpreter; Tesla T4, 15,360 MiB | Unchanged default sample, no repository checkout, empty per-model cache and weights | 134.118 s / 138.366 s | PASS — 8/8 cells; evidence review pending; [Retained run](verification/2026-09-13/README.md) |
+| 2026-09-13 | `749fbf6b9a87bbf67394aad2e338252d29d5910b` / `59edb7e523cd419cd64e49624e793d9de205b033` | Colab CLI to a fresh Python 3.12.3 interpreter; Tesla T4 | unchanged older eight-cell inference sample; no repository checkout; empty per-model cache | 134.118 s / 138.366 s | pass for that historical blob; [retained record](verification/2026-09-13/README.md) |
 
-The run used PyTorch `2.14.0+cu130`, `cuda:0` and `float32`. All eight code cells completed, runtime pins matched, every snapshot file was SHA-256 verified, inputs were accepted, and the negative validation probe was recorded. Results, model identity/revision, observed output, warnings, package versions, notebook outputs, executor source and cleanup evidence are retained in [the run record](verification/2026-09-13/README.md).
-
-The native hosted kernel was Python 3.13.15; its direct notebook attempt was aborted in installation after the Python-version mismatch was confirmed. The successful result above uses the repository-supported Python 3.12 interpreter on the Colab GPU. No completed native hosted-kernel run is claimed.
+The historical run used PyTorch `2.14.0+cu130`, verified every snapshot digest, and completed base AudioSet inference. It did not generate a labelled dataset, train a head, compute adapted metrics, export an adapter, or reload it, so it is not qualification evidence for the current `E2E` notebook.
 
 ## Current status
 
-Clean GPU execution evidence is now recorded for the exact notebook blob above. The registry status remains **Candidate** pending a reviewer’s acceptance of the evidence and an integrator’s promotion. This documentation change performs no promotion. The run is default-sample inference/contract evidence; it does not establish model quality or a benchmark result. CPU and BYOD paths were not exercised by this GPU run.
-
-Current source update: snapshot validation now runs before model-library imports (repair `fe0d775`, reviewer finding AST-001), so rejected requests fail with the intended validation error even when model libraries are absent. The standalone notebook was regenerated from this source (`b0bcd08`). The retained 2026-09-13 GPU run identifies the earlier notebook blob at `749fbf6`; the regenerated notebook has not had a fresh GPU execution. Status remains **Candidate**.
+The current generated notebook remains Candidate. A fresh supported-runtime run and evidence review are still open gates.
