@@ -1,0 +1,73 @@
+{
+  "task": "multiclass acoustic ecology classification",
+  "score_semantics": "softmax probability distribution over target classes",
+  "sample_kind": "synthetic_heldout",
+  "n_clips": 6,
+  "classes": [
+    "geophony",
+    "biophony",
+    "anthrophony"
+  ],
+  "metrics": {
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "per_class": {
+      "geophony": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 2
+      },
+      "biophony": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 2
+      },
+      "anthrophony": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 2
+      }
+    },
+    "confusion_matrix": [
+      [
+        2,
+        0,
+        0
+      ],
+      [
+        0,
+        2,
+        0
+      ],
+      [
+        0,
+        0,
+        2
+      ]
+    ],
+    "baseline": {
+      "majority_class_index": 2,
+      "majority_class_count": 2,
+      "majority_class_accuracy": 0.3333,
+      "num_classes": 3,
+      "n_samples": 6
+    },
+    "accuracy_delta_vs_baseline": 0.6667,
+    "num_samples": 6,
+    "num_classes": 3
+  },
+  "baseline": {
+    "majority_class_index": 2,
+    "majority_class_count": 2,
+    "majority_class_accuracy": 0.3333,
+    "num_classes": 3,
+    "n_samples": 6
+  },
+  "verdict": "sample-sanity",
+  "reason": "6 held-out clip(s) evaluated against majority baseline; not a benchmark claim",
+  "model_id": "MIT/ast-finetuned-audioset-10-10-0.4593",
+  "model_revision": "f826b80d28226b62986cc218e5cec390b1096902"
+}

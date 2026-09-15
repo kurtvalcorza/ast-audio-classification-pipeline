@@ -86,28 +86,35 @@ def test_validate_inputs_rejects_like_predict() -> None:
         validate_inputs([_tone()], SAMPLE_RATE, names=["a", "b"])
 
 
-def test_evaluation_report_is_always_not_measurable() -> None:
+def test_audioset_evaluation_report_is_not_measurable_without_aligned_ground_truth() -> None:
     report = evaluation_report(_result())
     assert report["verdict"] == "not-measurable"
     assert report["metrics"] == []
     assert report["baselines"] == []
     assert report["n_clips"] == 1
     assert report["n_scored_labels"] == 5
-    assert "no metric helper is shipped" in report["reason"]
+    assert "no AudioSet-labelled ground truth" in report["reason"]
     assert "mean average precision" in report["needs"]
     assert "0.4593" in report["needs"]
     assert "do not sum" in report["score_semantics"]
     assert (report["model_id"], report["model_revision"]) == (MODEL_ID, MODEL_REVISION)
 
 
-def test_evaluation_report_stays_not_measurable_with_targets() -> None:
+def test_audioset_evaluation_report_rejects_unaligned_target_claims() -> None:
     report = evaluation_report(_result(), ["Speech"], sample_kind="BYOD")
     assert report["verdict"] == "not-measurable"
     assert report["metrics"] == []
     assert report["sample_kind"] == "BYOD"
-    assert "no metric helper for multi-label audio" in report["reason"]
+    assert "not established as labels from the 527-class AudioSet ontology" in report["reason"]
 
 
 def test_evaluation_report_carries_the_truncation_flag() -> None:
     assert evaluation_report(_result(truncated=True))["truncated"] is True
     assert evaluation_report(_result())["truncated"] is False
+
+
+def test_evaluation_report_rejects_adapted_softmax_results() -> None:
+    result = _result()
+    result["activation"] = "softmax"
+    with pytest.raises(ValueError, match="only supports unadapted AudioSet sigmoid results"):
+        evaluation_report(result)

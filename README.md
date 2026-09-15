@@ -1,64 +1,88 @@
 # AST Audio Classification Pipeline
 
-DIMER-oriented inference wrapper for the **MIT Audio Spectrogram Transformer fine-tuned on AudioSet**, pinned to an immutable Hugging Face revision. The repository exposes multi-label audio event classification over the 527 AudioSet classes, a supply-chain check of the local weight snapshot, and machine-readable provenance.
+DIMER-oriented Audio Spectrogram Transformer pipeline with both pinned AudioSet inference and bounded classifier-head adaptation. The standalone tutorial turns the pretrained representation into a three-class acoustic-ecology classifier entirely inside one Python 3.12 runtime.
 
 ## Upstream alignment
 
 - Model: `MIT/ast-finetuned-audioset-10-10-0.4593`
 - Revision: `f826b80d28226b62986cc218e5cec390b1096902`
 - Upstream weight license: BSD-3-Clause
-- Upstream task: audio classification (AudioSet ontology, 527 labels, sigmoid per label)
-- Repository adaptation: **none**; inference only
+- Base task: multi-label AudioSet classification over 527 labels using independent sigmoid scores
+- Tutorial adaptation: single-label `geophony` / `biophony` / `anthrophony` classification with a seeded three-class head and frozen AST backbone
 
 ## Quick start
 
 ```python
-import numpy as np
-from ast_audio_classification_pipeline import ASTAudioClassificationPipeline, SAMPLE_RATE
+from ast_audio_classification_pipeline import (
+    ADAPT_CLASSES,
+    ASTAudioClassificationPipeline,
+    split_dataset,
+    synthetic_audio_dataset,
+)
 
-pipe = ASTAudioClassificationPipeline.from_pretrained()          # verifies weights/ast-audioset first
-t = np.arange(3 * SAMPLE_RATE) / SAMPLE_RATE
-sine = (0.5 * np.sin(2 * np.pi * 440.0 * t)).astype(np.float32)
-result = pipe.predict(sine, sample_rate=SAMPLE_RATE, top_k=5)
-print(result["predictions"][0])   # {'label': 'Sine wave', 'index': ..., 'score': ...}
+records = synthetic_audio_dataset(n_samples=24, seed=42)
+train_records, val_records = split_dataset(records, val_fraction=0.25, seed=42)
+
+pipe = ASTAudioClassificationPipeline.from_pretrained()  # verifies weights first
+pipe.rehead(ADAPT_CLASSES, seed=42)
+pipe.freeze_backbone()
+history = pipe.finetune(
+    train_records,
+    val_records,
+    epochs=5,
+    batch_size=4,
+    learning_rate=1e-3,
+    seed=42,
+)
+report = pipe.evaluate(val_records)
+pipe.save_artifact("outputs/ast-audio-adapter-v1.pt")
 ```
 
-`predict()` takes a 1-D float array plus the rate it was captured at; input at a rate other than 16 kHz is resampled with `torchaudio.functional.resample`. Only the first 10.24 s reach the model (`MAX_AUDIO_SECONDS`); longer clips are cropped and flagged `truncated: True`, and clips above `MAX_INPUT_SECONDS` (120 s) are rejected so the caller chunks them.
+The default sample has 24 generated clips and a deterministic stratified 18/6 train/validation split. Frozen backbone features are cached once; AdamW updates only the 3,843-parameter classifier head. `evaluate()` reports accuracy, macro-F1, per-class metrics, a confusion matrix, and the delta from the majority-class baseline.
+
+The generated dataset uses the owner-namespaced representation `io.github.kurtvalcorza.dataset.audio.waveform-classification.v1`. It is a transparent tutorial fixture, not a real acoustic-ecology benchmark. The optional notebook BYOD path accepts one bounded ZIP with exactly `geophony/`, `biophony/`, and `anthrophony/` top-level directories and at least two 16 kHz PCM WAV files per class.
+
+## Base inference contract
+
+Before re-heading, `predict()` takes a 1-D float array in `[-1, 1]` plus its source sample rate and returns ranked independent sigmoid scores over the 527 AudioSet labels. Non-16 kHz input is resampled. Only the first 10.24 seconds reach the model, clips longer than 120 seconds are rejected, and truncation is reported explicitly. Because the repository has no AudioSet-labelled evaluation corpus, `evaluation_report()` for this base path remains `not-measurable`.
+
+After re-heading, predictions are a softmax distribution over the ordered target vocabulary. The saved `org.valcorza.ast-audio.adapter.v1` artifact contains only the classifier state, target classes, adaptation settings, and exact base-model lineage; a fresh load reconstructs the pinned base model and safely reads the artifact with `weights_only=True`.
 
 ## Weights layout
 
-```
+```text
 weights/ast-audioset/
   README.md  config.json  model.safetensors  preprocessor_config.json  dimer-base-manifest.json
 ```
 
-`from_pretrained()` calls `verify_snapshot()` (size + SHA-256 of every manifest entry) and loads with `local_files_only=True`. Without a verified snapshot it raises unless `allow_download=True`, in which case it pulls the pinned revision from the Hub. See `docs/WEIGHTS.md`.
+`from_pretrained()` verifies the size and SHA-256 of every manifest entry and loads the local snapshot with `local_files_only=True`. Without a verified snapshot it raises unless `allow_download=True`, which fetches the immutable revision above. See `docs/WEIGHTS.md`.
 
 ## Tests
 
-```
+```text
 pip install -e . --no-deps
-pytest -q -o addopts= tests
+pytest -q
+python tools/build_notebook.py --check
+python tools/validate_release_assets.py
+ruff check src tests tools
 ```
 
-Tests are offline: they use an injected fake runner and a temporary manifest, never the weights.
+The unit suite is offline and uses injected or tiny models. A separate local CPU check of the real pinned model is recorded in the model card, and the qualifying clean-runtime Kaggle run is retained under `docs/verification/2026-09-16-kaggle-t4/`.
 
-## Tutorials
+## Tutorial
 
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/kurtvalcorza/ast-audio-classification-pipeline/blob/main/tutorials/ast_audio_classification_colab.ipynb)
 
-`tutorials/ast_audio_classification_colab.ipynb` is declared `TASK-INFERENCE` under DIMER Notebook Specification 1.1 and is **standalone** (§3.6): generated by `tools/build_notebook.py`, it carries the pipeline module, model identity, manifest digests and runtime pins, so the exported notebook runs without this repository (parity enforced by `tests/test_notebook_parity.py`). Its default path generates a 3 s, 440 Hz sine tone in code at 16 kHz (no download, no ground truth), surfaces the pipeline ceilings, resolves the pinned model through the public API, validates the clip into an input manifest with `validate_inputs`, ranks the 527 AudioSet labels by independent sigmoid score (uncalibrated, no shipped threshold), writes an `evaluation_report` that is always `not-measurable` (no metric helper is shipped and no labelled audio exists), and exports JSON plus a rank-ordered CSV. BYOD (one PCM WAV file) is optional and gated off by default. See `tutorials/README.md` for the registry and `docs/release-verification.md` for the release gate.
+`tutorials/ast_audio_classification_colab.ipynb` declares the `E2E` profile under DIMER Notebook Specification 2.0 and is a generated standalone carrier. Its 14 stages install pinned dependencies, verify and demonstrate the unchanged base model, validate the dataset, split, re-head, freeze, adapt, evaluate, predict an unseen clip, export the adapter, reload a fresh base-model instance, check numerical parity, and export provenance. Edit `tools/notebook_template.py` or the package modules, then regenerate with `python tools/build_notebook.py`; do not hand-edit the notebook.
 
 ## Release status
 
-**Candidate.** The default standalone notebook passed 8/8 unchanged code cells on a Colab Tesla T4 in an isolated Python 3.12 runtime on 2026-09-13. [Recorded GPU evidence](docs/release-verification.md) includes the exact notebook blob, exports and execution log. Release promotion awaits evidence review; these sample execution checks do not measure general model quality.
+**Candidate.** Source validation, 49 offline tests, local CPU pre-flight, and an unchanged clean Kaggle Tesla T4 run of the current E2E notebook are recorded. The post-review run verified commit `79543f3` and notebook blob `0be7254`, then completed 16/16 cells after the expected dependency-install restart. Promotion remains a separate evidence-review decision. See `docs/release-verification.md`.
 
 ## Licensing
 
-This repository's code is Apache-2.0 (`LICENSE`). The packaged upstream weights are BSD-3-Clause; see `docs/WEIGHTS.md` and `MODEL_CARD.md`.
-
-Current source update: snapshot validation now runs before model-library imports (repair `fe0d775`, reviewer finding AST-001), so rejected requests fail with the intended validation error even when model libraries are absent. The standalone notebook was regenerated from this source (`b0bcd08`). The retained 2026-09-13 GPU run identifies the earlier notebook blob at `749fbf6`; the regenerated notebook has not had a fresh GPU execution. Status remains **Candidate**.
+Repository code is Apache-2.0 (`LICENSE`). The upstream weights are BSD-3-Clause; see `docs/WEIGHTS.md` and `MODEL_CARD.md`.
 
 ## AI Assistance Disclosure
 
-This repository’s code and accompanying documentation were developed with generative AI assistance for code development and technical writing under maintainer direction. The maintainer remains responsible for reviewing the implementation, validating results, and making release decisions. AI assistance does not constitute independent verification, provider endorsement, or release approval.
+This repository's code and documentation were developed with generative AI assistance under maintainer direction. The maintainer remains responsible for review, validation, and release decisions; AI assistance is not independent verification or provider endorsement.
