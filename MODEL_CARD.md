@@ -51,7 +51,7 @@ The base checkpoint was trained from heterogeneous consumer recordings and codec
 
 ###### Environment
 
-The declared environment is Python 3.12 with pinned PyTorch, torchaudio, torchvision, Transformers, safetensors, NumPy, and huggingface-hub versions from `pyproject.toml`. The current E2E path was exercised locally on CPU with float32 and the verified snapshot. A fresh supported-runtime execution of the current notebook has not yet been recorded. CUDA numerical results can differ slightly while still satisfying the reload tolerance.
+The declared environment is Python 3.12 with pinned PyTorch, torchaudio, torchvision, Transformers, safetensors, NumPy, and huggingface-hub versions from `pyproject.toml`. The current E2E path was exercised locally on CPU with float32 and the verified snapshot, then run unchanged on a clean Kaggle Tesla T4 runtime. CUDA numerical results can differ slightly while still satisfying the reload tolerance.
 
 #### Metrics
 

@@ -67,7 +67,7 @@ python tools/validate_release_assets.py
 ruff check src tests tools
 ```
 
-The unit suite is offline and uses injected or tiny models. A separate local CPU check of the real pinned model is recorded in the model card; source checks and local execution do not replace a fresh supported-runtime notebook run.
+The unit suite is offline and uses injected or tiny models. A separate local CPU check of the real pinned model is recorded in the model card, and the qualifying clean-runtime Kaggle run is retained under `docs/verification/2026-09-16-kaggle-t4/`.
 
 ## Tutorial
 
