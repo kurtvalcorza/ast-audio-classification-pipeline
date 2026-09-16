@@ -1,7 +1,7 @@
 [project]
 name = "ast-audio-classification-pipeline"
 version = "0.1.0"
-description = "DIMER inference pipeline for the MIT Audio Spectrogram Transformer fine-tuned on AudioSet (527-label audio event classification)"
+description = "DIMER AST pipeline for pinned AudioSet inference and bounded classifier-head audio adaptation"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 license = { file = "LICENSE" }

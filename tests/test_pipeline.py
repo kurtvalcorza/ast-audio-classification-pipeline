@@ -123,6 +123,8 @@ def test_from_pretrained_valid_snapshot_reaches_model_import(tmp_path, forbid_mo
         (np.zeros(16_000, dtype=np.float32), SAMPLE_RATE, 0, ValueError),  # top_k too small
         (np.zeros(16_000, dtype=np.float32), SAMPLE_RATE, NUM_LABELS + 1, ValueError),  # top_k too big
         (np.zeros(100, dtype=np.float32), SAMPLE_RATE, 5, ValueError),  # shorter than one frame
+        (np.zeros(0, dtype=np.float32), SAMPLE_RATE, 5, ValueError),  # empty
+        (np.full(16_000, 1.01, dtype=np.float32), SAMPLE_RATE, 5, ValueError),  # outside range
         (np.zeros(int(MAX_INPUT_SECONDS * SAMPLE_RATE) + 1, dtype=np.float32), SAMPLE_RATE, 5, ValueError),
         (np.array([0.0, np.nan] * 8_000, dtype=np.float32), SAMPLE_RATE, 5, ValueError),  # NaN
     ],
