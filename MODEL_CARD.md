@@ -10,6 +10,11 @@ date_published_source: "Hugging Face Hub repository creation date of the exact h
 
 # Audio Spectrogram Transformer — AudioSet Inference and Acoustic-Ecology Head Adaptation
 
+[![Hugging Face](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-MIT%2Fast--finetuned--audioset--10--10--0.4593-ffcc4d?style=flat)](https://huggingface.co/MIT/ast-finetuned-audioset-10-10-0.4593)
+[![Upstream GitHub](https://img.shields.io/badge/Upstream%20GitHub-YuanGongND%2Fast-181717?style=flat&logo=github&logoColor=white)](https://github.com/YuanGongND/ast)
+[![arXiv Paper](https://img.shields.io/badge/arXiv-2104.01778-b31b1b.svg)](https://arxiv.org/abs/2104.01778)
+[![License: BSD-3-Clause](https://img.shields.io/badge/License-BSD--3--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
+
 > [!WARNING]
 > Provided for research, training, and evaluation. The upstream weights are supplied under BSD-3-Clause and the repository code under Apache-2.0, without warranty. This pipeline has not been validated for production, clinical, safety-critical, legal, or other high-impact decision use.
 
