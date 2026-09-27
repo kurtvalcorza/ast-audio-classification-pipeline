@@ -82,3 +82,21 @@ The historical run used PyTorch `2.14.0+cu130`, verified every snapshot digest, 
 ## Current status
 
 Clean Kaggle T4 execution evidence is recorded for post-review commit `79543f3` and notebook blob `0be7254`. The notebook remains Candidate pending review of the retained evidence and an explicit integrator promotion decision. Optional BYOD branches were not exercised by this default-path run.
+
+## Sound-event classification workshop notebook
+
+`tutorials/DIMER_Sound_Event_Classification_Workshop.ipynb` (`E2E` / `WORKSHOP`, DIMER Notebook Specification 2.2) is a **Candidate**. It is recorded separately from `ast_audio_classification_colab.ipynb`, whose status it does not change. It carries the AST package modules, the model manifest and code licence, the pinned ESC-50 metadata and attribution (`karolpiczak/ESC-50@33c8ce9`), a 400-clip ESC-10 sample manifest, a runner and a hash-pinned dependency lock, and installs them into an isolated `uv` Python 3.12.12 environment. Its design is `docs/sound-event-classification-workshop-spec.md`.
+
+| Check | Automatic (every pull request) | Manual (before promotion) |
+|---|---|---|
+| Metadata, opening declaration, no persisted outputs, every code cell plain Python | `tools/validate_release_assets.py` | — |
+| Each carried file matches `CARRIED_HASHES`; carried `ast_reference/`, AST manifest and code licence equal the package; `source.json` agrees with the metadata; the carried ESC-50 metadata and licence are the files the sample manifest pins | `tools/validate_release_assets.py`, `tests/test_workshop_notebook.py` | — |
+| Default `Run all` on a fresh Colab T4 runtime without a restart, with total time, peak GPU memory and disk recorded | — | required; not yet recorded |
+| Labelled BYOD (representative real data, required by the design for qualification) and the unlabelled-recording branch | — | not yet exercised |
+
+| Date (UTC) | Notebook source | Executor | Path exercised | Wall | Outcome |
+|---|---|---|---|---|---|
+| 2026-09-27 | This branch (carried `workshop.py` sha256 `dc7c97d7e7fd…`) | Builder pre-flight in a Linux container, CPU only (4 cores). The exact hash-pinned lock was installed with `uv` 0.12.15 into managed Python 3.12.12 (torch 2.11.0+cu130, torchaudio 2.11.0+cu130, transformers 4.57.6). The runner's GPU-required `require_gpu()`, synchronize calls and peak-memory read were patched in a copy for CPU | `prepare` (400 ESC-10 WAVs downloaded and digest-verified; 240 / 80 / 80 clips in 188 / 59 / 57 source groups), `train` (frozen-feature cache, 10 epochs, 600 optimizer updates), `reload` (new process), `activity`, `report`. The notebook's display, worked-example and report cells were then run against those outputs; the optional branches were left at their defaults (off) | prepare 162 s, train 251 s (feature cache 190 s), reload 52 s, activity 51 s, report 1 s (CPU float32) | **PASS**. Validation macro-F1 was 0.0458 at epoch 0 and 1.0000 from epoch 1 onward, so the earliest-tie rule selected **epoch 1**. Test accuracy / macro-F1: training-majority 0.100 / 0.018, seeded initial head 0.088 / 0.059, selected head **0.975 / 0.975**. Backbone SHA-256 was identical before and after training. Reload parity passed on 4 probes and all 80 test clips (max logit and probability delta 0.0, metric parity true). Noise activity on 20 validation clips (accuracy / changed predictions vs gain-matched clean): clean 1.00 / 0, 20 dB 1.00 / 0, 10 dB 0.85 / 3, 0 dB 0.60 / 8. `sound_results.zip` was exported. **Not a supported runtime and not promotion evidence**: CPU float32 differs from the T4 path, so Colab figures may differ |
+
+Validation saturates at macro-F1 1.0 after one epoch, so epoch selection is uninformative on this sample; the test comparison is the evidence of adaptation. The notebook stays **Candidate** until a fresh Colab T4 `Run all` of the exact committed blob, the ESC-10 per-clip attribution review it names (233 CC0, 165 CC BY, 2 CC Sampling+) and a representative labelled BYOD run are recorded here.
+
