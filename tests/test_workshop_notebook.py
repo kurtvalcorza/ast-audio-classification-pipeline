@@ -135,3 +135,14 @@ def test_control_metadata_key_is_required(tree: Path, key: str) -> None:
     _edit(tree, lambda notebook: notebook["metadata"]["dimer"].pop(key))
     with pytest.raises(module.ValidationError, match=key):
         module.validate_workshop_notebooks()
+
+
+def test_worker_environment_forces_a_file_backend_for_matplotlib() -> None:
+    # Colab exports MPLBACKEND=module://matplotlib_inline.backend_inline, which the isolated worker cannot
+    # import; the 2026-09-27 Colab run failed in `prepare` until the runner environment set Agg.
+    notebook = json.loads((ROOT / "tutorials" / WORKSHOP).read_text(encoding="utf-8"))
+    runner = next(
+        "".join(c["source"]) for c in notebook["cells"] if "ENV = dict(os.environ" in "".join(c["source"])
+    )
+    assert "ENV['MPLBACKEND'] = 'Agg'" in runner
+    assert runner.index("ENV['MPLBACKEND'] = 'Agg'") < runner.index("subprocess.run([str(UV), 'venv'")
