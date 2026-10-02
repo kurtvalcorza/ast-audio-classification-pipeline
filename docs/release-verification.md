@@ -1,17 +1,18 @@
 # Release verification
 
-`tutorials/ast_audio_classification_colab.ipynb` is a standalone `E2E` Candidate. The current revision has source checks, local CPU pre-flight evidence, and a clean Kaggle Tesla T4 execution record. Candidate remains unchanged until an explicit evidence-review and promotion decision.
+`tutorials/ast_audio_classification_colab.ipynb` is a standalone `E2E` Candidate (`GUIDED`, DIMER Notebook Specification 2.2). The 2026-10-03 revision fixes the 2026-10-02 notebook review ([review](reviews/2026-10-02-notebook-review/ast_audio_classification_colab_Review.md); findings AST-M1–M3, AST-m1–m6). Its main change is that nothing is installed into the notebook kernel any more: a pinned `uv` builds an isolated, hash-locked Python 3.12.12 environment from `tutorials/requirements-colab.lock.txt`, and every stage of `tools/tutorial_stages.py` runs there in its own process. The revision has source checks, unit tests and a local CPU pre-flight; **no hosted run of it is recorded yet**. Candidate remains unchanged until hosted one-pass evidence is recorded and an explicit promotion decision is made.
 
 ## Automatic coverage
 
 CI and the local validator check that:
 
-- notebook JSON parses, code cells compile, outputs and execution counts are cleared, explanatory markdown precedes code, and `metadata.dimer` declares Notebook Specification 2.0, profile `E2E`, mode `GUIDED`, standalone generation metadata, and module hashes;
-- the notebook is byte-identical to `tools/build_notebook.py` output and carries repository-matching `metrics.py`, `samples.py`, and `pipeline.py`, immutable model identity, snapshot manifest, and dependency pins;
-- the default path uses public pipeline APIs for base inference, dataset generation and validation, stratified splitting, re-heading, freezing, fine-tuning, evaluation, artifact export, safe reload, and adapted inference;
-- both upload gates default off, prohibited direct-library and unsafe deserialization patterns stay outside learner code, and the archive path has bounded member, compressed-size, expanded-size, path, encoding, sample-rate, duration, and class checks;
-- the five expected outputs are named: input manifest, evaluation report, result/provenance JSON, rank-ordered CSV, and classifier-head adapter;
+- notebook JSON parses, code cells compile, outputs and execution counts are cleared, explanatory markdown precedes code, and `metadata.dimer` declares Notebook Specification 2.2, profile `E2E`, mode `GUIDED`, standalone generation metadata, the isolated environment and the carried-file hashes;
+- the notebook is byte-identical to `tools/build_notebook.py` output; its carrier cell holds the package modules (`__init__.py`, `metrics.py`, `samples.py`, `pipeline.py`), the stage runner, the lock, the snapshot manifest and the licence byte for byte, and verifies each against `CARRIED_HASHES`;
+- the lock pins every `pyproject.toml` pin, hashes every entry and was compiled wheel-only for manylinux x86_64; the only installer is the pinned `uv` wheel (URL, size and SHA-256), into a separate environment, with `--require-hashes --only-binary :all:`; no kernel cell imports a model library or runs `pip`;
+- the learner cells run the stages in order (`weights`, `runtime`, `pretrained`, `dataset`, `baseline`, `finetune`, `evaluate`, `reload`, `bundle`, then the optional `activity`), and the runner uses the public pipeline API for staging, verification, base inference, dataset validation and splitting, re-heading, freezing, fine-tuning, evaluation, export and safe reload;
+- the three gates (`USE_BYOD`, `USE_BYOD_DATASET`, `RUN_ACTIVITY`) default off, each BYOD gate has a path field, prohibited direct-library and unsafe deserialization patterns stay out of kernel and carried code, and the guided layer (orientation, predictions, checkpoints, troubleshooting, conclusion, collapsed infrastructure) is present;
 - `README.md`, `STATUS.md`, this document, the tutorial registry, model card, weight documentation, and package constants agree on identity and Candidate status;
+- `tests/test_tutorial_stages.py` runs every stage, in order and through files only, against a small randomly initialised AST stand-in, and `tests/test_ast_audio_classification_colab_review_fixes.py` guards each review finding's acceptance check;
 - the offline tests and lint pass.
 
 These are source and unit checks, not supported-runtime execution evidence.
@@ -20,56 +21,46 @@ These are source and unit checks, not supported-runtime execution evidence.
 
 | Path | Runtime | Role |
 |---|---|---|
-| Google Colab | fresh Python 3.12 runtime, CPU or CUDA | primary supported tutorial path and promotion evidence |
-| Kaggle notebook executor | fresh Python 3.12 image with a minimal `google.colab` upload shim | equivalent clean-room path for the standalone notebook |
-| Local Windows/WSL harness | pinned project environment, sequential or direct API execution | pre-flight only; useful for defect discovery and measurements, not promotion |
+| Google Colab | fresh Linux x86_64 runtime, T4 GPU or CPU | primary supported tutorial path and promotion evidence |
+| Kaggle notebook executor | fresh Linux x86_64 image | equivalent clean-room path; BYOD branches use the path fields, so no `google.colab` shim is needed |
+| Local Windows/WSL harness | the stage runner driven by the notebook's own kernel helpers, with a local interpreter standing in for the isolated environment | pre-flight only; useful for defect discovery and measurements, not promotion |
 
 ## Supported release verification procedure
 
 Before promotion:
 
 1. Resolve the exact commit and notebook Git blob under review. Confirm the generator, validator, lint, and full unit suite pass at that revision.
-2. Start a fresh supported Python 3.12 runtime with no repository checkout and a clean model cache. Run the exact generated notebook from top to bottom without editing implementation cells. Keep `USE_BYOD = False` and `USE_BYOD_DATASET = False` for the qualifying default path.
-3. Confirm the runtime pins and `NOTEBOOK_SOURCE.repository_revision` match the notebook metadata.
-4. Confirm all 14 stages complete:
-   - install the pinned environment;
-   - execute the three carried package modules;
-   - write and validate the immutable model manifest;
-   - print runtime versions, device, and audio ceilings;
-   - load the verified `MIT/ast-finetuned-audioset-10-10-0.4593` revision and demonstrate unchanged 527-label independent-sigmoid inference;
-   - generate and validate 24 balanced `geophony`, `biophony`, and `anthrophony` records under `io.github.kurtvalcorza.dataset.audio.waveform-classification.v1`, while recording the expected rejected over-long probe;
-   - create a seeded, disjoint, stratified 18/6 train/validation split;
-   - install the seeded three-class head, freeze the transformer backbone, and record the pre-adaptation result and majority baseline;
-   - cache frozen backbone features and run five classifier-head epochs at batch size 4 and learning rate `1e-3`;
-   - evaluate the held-out split with accuracy, macro-F1, per-class metrics, confusion matrix, and baseline delta;
-   - classify the newly generated unseen biophony clip with three-class softmax scores;
-   - export the classifier-only `org.valcorza.ast-audio.adapter.v1` artifact;
-   - load the artifact safely over a fresh pinned base instance and pass the numerical score comparison at `rtol=1e-5`, `atol=1e-6`;
-   - write the complete output and provenance bundle.
-5. Verify the adapter does not contain the frozen backbone and records the ordered classes, base model ID and revision, activation, artifact version, and training configuration.
-6. Retain the notebook blob, source commit, executor, Python and package versions, device, clean-cache state, cell-by-cell outcome, duration, output files and hashes, measured metrics, artifact size, reload delta, warnings, and cleanup evidence. Do not retain access tokens.
-7. Treat any failing default-path cell, missing output, identity mismatch, unsafe load, or failed reload comparison as a release blocker. Review the evidence before changing status.
-
-Optional single-WAV and dataset-ZIP branches should be tested separately. Their failure does not alter what the default-path run exercised, but a known defect must be recorded and repaired before claiming those branches are supported.
+2. Start a fresh supported Linux x86_64 runtime with no repository checkout and a clean model cache. Run the exact generated notebook with **Run all**, once, without editing implementation cells and **without a restart**. Keep `USE_BYOD = False`, `USE_BYOD_DATASET = False` and `RUN_ACTIVITY = False` for the qualifying default path.
+3. Confirm the execution counts run 1..N in one kernel session with no error output, and that `NOTEBOOK_SOURCE` and the isolated environment's versions match the notebook metadata and the lock. Record the pass count explicitly; a run that needed a restart is not a one-pass `Run all`.
+4. Confirm every stage completes: runtime check; carried files verified; isolated environment installed; snapshot staged and verified; versions checked against the lock; pretrained inference on the tone; 24 distinct generated clips validated with 0 train/evaluation duplicates; seeded 18/6 split; re-head, freeze, untrained-head and training-majority baselines; five-epoch head fine-tune and adapter export; held-out evaluation and unseen-clip prediction in a fresh process; reload parity on all 21 scores at `rtol=1e-5`, `atol=1e-6`; provenance bundle.
+5. Run the optional branches in separate fresh sessions and record each: dataset BYOD with a valid ZIP (positive) and with a ZIP the stage must refuse (negative), single-WAV BYOD, and the activity.
+6. Retain the notebook blob, source commit, executor, Python and package versions, device, clean-cache state, cell-by-cell outcome, pass count, duration, output files and hashes, measured metrics, artifact size, reload delta and warnings. Do not retain access tokens.
+7. Treat any failing default-path cell, a needed restart, a missing output, an identity mismatch, an unsafe load, or a failed reload comparison as a release blocker. Review the evidence before changing status.
 
 ## Recorded executions
 
-### Clean supported-runtime E2E evidence
+### Isolated-environment revision (2026-10-03)
+
+| Date | Source | Executor | Path | Observations | Qualification |
+|---|---|---|---|---|---|
+| 2026-10-03 | branch `review/ast_audio_classification_colab-2026-10-02` working tree (generator /3.0) | Windows, CPU only. The notebook's own carrier cell and `run_stage` helper were executed by a harness; a local uv virtual environment with CPython 3.12.12 and the CPU builds of the pinned packages (torch 2.14.0+cpu, torchaudio 2.11.0+cpu, transformers 4.57.6) stood in for the hash-locked Linux environment; real pinned weights | all learner cells in order, then the activity at 0, -10, -20 and -30 dB | runtime versions matched the lock; tone top label `Sine wave`; 24 distinct waveforms, 0 train/evaluation duplicates; untrained head accuracy 0.0, training-majority baseline 0.3333; five epochs, evaluation accuracy 1.0 from epoch 1; held-out accuracy and macro-F1 1.0; unseen biophony clip ranked first at 0.9718; reload parity 21/21 scores, maximum difference 0.0; activity: 0 dB unchanged, -10 dB and below moved all four biophony and anthrophony clips to geophony (accuracy 0.3333) | pre-flight only: not Linux, not the hash-locked install, not a hosted runtime, not promotion evidence |
+
+### Superseded in-kernel-install revision (blob `0be7254`)
+
+These runs executed the earlier notebook, which pip-installed the pins into the notebook kernel. On a fresh hosted image that install replaced already-imported NumPy and cuda-bindings, and the install cell stopped with `RuntimeError: Core dependencies changed while older modules were loaded … Restart the runtime, then rerun from the top.` The executor then restarted and ran the notebook again. **Neither run is a one-pass `Run all`** (RUN1, RUN10): each took 2 passes.
 
 | Date (UTC) | Commit / notebook blob | Executor | Path exercised | Wall time | Outcome |
 |---|---|---|---|---:|---|
-| 2026-09-15 | `79543f3bb5a745493cf781fe29278e9b5524b7d3` / `0be72542ca1f99e9d60b64aac59a36727e3c6cf6` | Kaggle serial suite, `kurtvalcorza/dimer-nb2-ast-audio-classification` v3; Tesla T4 15,360 MiB; Python 3.12.13 | unchanged post-review E2E path, no repository checkout, clean Hugging Face cache, pinned install, digest-verified model download, base inference, generated dataset, split, adaptation, held-out evaluation, export, fresh reload | 225.6 s | **PASS** — 16/16 cells after one expected restart; five outputs preserved and hashed; [retained evidence](verification/2026-09-16-kaggle-t4/README.md) |
-| 2026-09-15 | `b939aa3cd30cbe334c43f87b96eb96ed8e16180e` / `3a99508abd3b3308174a5f8346e685fca771bbf4` | Kaggle serial suite, `kurtvalcorza/dimer-nb2-ast-audio-classification` v2; Tesla T4 15,360 MiB; Python 3.12.13 | unchanged default E2E path, no repository checkout, clean Hugging Face cache, pinned install, digest-verified model download, base inference, generated dataset, split, adaptation, held-out evaluation, export, fresh reload | 204.3 s | **PASS** — 16/16 cells after one expected restart; five outputs preserved and hashed; [retained evidence](verification/2026-09-16-kaggle-t4/README.md) |
+| 2026-09-15 | `79543f3bb5a745493cf781fe29278e9b5524b7d3` / `0be72542ca1f99e9d60b64aac59a36727e3c6cf6` | Kaggle serial suite, `kurtvalcorza/dimer-nb2-ast-audio-classification` v3; Tesla T4 15,360 MiB; Python 3.12.13 | unchanged post-review E2E path, no repository checkout, clean Hugging Face cache, pinned install, digest-verified model download, base inference, generated dataset, split, adaptation, held-out evaluation, export, fresh reload | 225.6 s | **2 passes — not a one-pass `Run all`**: pass 1 stopped at the install cell (restart required); pass 2 in a new kernel completed 16/16 cells; five outputs preserved and hashed; [retained evidence](verification/2026-09-16-kaggle-t4/README.md) |
+| 2026-09-15 | `b939aa3cd30cbe334c43f87b96eb96ed8e16180e` / `3a99508abd3b3308174a5f8346e685fca771bbf4` | Kaggle serial suite, `kurtvalcorza/dimer-nb2-ast-audio-classification` v2; Tesla T4 15,360 MiB; Python 3.12.13 | unchanged default E2E path, no repository checkout, clean Hugging Face cache, pinned install, digest-verified model download, base inference, generated dataset, split, adaptation, held-out evaluation, export, fresh reload | 204.3 s | **2 passes — not a one-pass `Run all`**: pass 1 stopped at the install cell (restart required); pass 2 completed 16/16 cells; five outputs preserved and hashed; [retained evidence](verification/2026-09-16-kaggle-t4/README.md) |
 
-The installed notebook environment was PyTorch `2.14.0+cu130`, torchaudio `2.11.0+cu130`, and Transformers `4.57.6`. All four manifest-listed model files were downloaded from the immutable model revision and digest-verified. The six-clip synthetic held-out evaluation reported accuracy and macro-F1 `1.0`, compared with majority accuracy `0.3333`; the unseen generated biophony clip scored `0.987455`; the 19,103-byte classifier-head artifact reloaded over a fresh base instance with the same checked score. These are execution and sample-sanity observations, not field-recording or benchmark claims.
+The installed notebook environment was PyTorch `2.14.0+cu130`, torchaudio `2.11.0+cu130`, and Transformers `4.57.6`. All four manifest-listed model files were downloaded from the immutable model revision and digest-verified. The six-clip synthetic held-out evaluation reported accuracy and macro-F1 `1.0`, compared with majority accuracy `0.3333`; the unseen generated biophony clip scored `0.987455`; the 19,103-byte classifier-head artifact reloaded over a fresh base instance with the same checked score. The 2026-10-02 review found that this generated dataset held only 13 distinct waveforms and that two of the six evaluation clips were identical to training clips, so part of that held-out score measured memorisation. These are execution and sample-sanity observations, not field-recording or benchmark claims.
 
-### Current E2E pre-flight
+### Superseded E2E pre-flight
 
 | Date | Source | Executor | Path | Observations | Qualification |
 |---|---|---|---|---|---|
 | 2026-09-16 | local uncommitted `feat/ast-e2e-finetuning` working tree | Windows, Python 3.12, CPU, pinned local snapshot and exact dependencies preinstalled | all 16 generated notebook code cells, including carried modules, base inference, generate, split, re-head, freeze, adapt, evaluate, unseen predict, export, and fresh reload | 24 clips; 18/6 split; 5 epochs; 25 optimizer steps; 1.259 s adaptation in the warm process; held-out accuracy 1.0 and macro-F1 1.0; majority baseline 0.3333; unseen biophony predicted correctly at 0.9874; 19,103-byte artifact; reload maximum absolute score difference 0 | pre-flight only; installation was intentionally skipped, and this is not a fresh supported-runtime run |
-
-This evidence verifies the real model path locally and guided the bounded default schedule. It does not show generalisation to field recordings and cannot support a benchmark claim.
 
 ### Historical inference-only evidence
 
@@ -81,7 +72,7 @@ The historical run used PyTorch `2.14.0+cu130`, verified every snapshot digest, 
 
 ## Current status
 
-Clean Kaggle T4 execution evidence is recorded for post-review commit `79543f3` and notebook blob `0be7254`. The notebook remains Candidate pending review of the retained evidence and an explicit integrator promotion decision. Optional BYOD branches were not exercised by this default-path run.
+**Candidate.** No hosted execution of the isolated-environment revision is recorded. The earlier Kaggle T4 runs of blob `0be7254` needed a restart (2 passes) and do not meet the one-pass `Run all` requirement. Before promotion: a fresh Colab T4 `Run all` of the revision under review in one pass, the equivalent Kaggle run, and recorded positive and negative dataset-BYOD runs and a single-WAV BYOD run through the downstream stages.
 
 ## Sound-event classification workshop notebook
 
