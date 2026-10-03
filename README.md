@@ -77,7 +77,7 @@ The unit suite is offline and uses injected or tiny models. A separate local CPU
 
 ## Release status
 
-**Candidate.** Source validation, offline tests and a local CPU pre-flight of the 2026-10-03 isolated-environment revision are recorded; no hosted run of that revision is recorded yet. The earlier Kaggle Tesla T4 runs of notebook blob `0be7254` completed 16/16 cells only after a dependency-install restart (2 passes), so they are not one-pass `Run all` evidence. Promotion remains a separate evidence-review decision. See `docs/release-verification.md`.
+**Candidate.** Source validation, offline tests, a local CPU pre-flight and one hosted Colab T4 default-path run (15/15 code cells, one pass, no restart, 0 errors) of the 2026-10-03 isolated-environment revision are recorded; Kaggle, BYOD and activity runs are not recorded yet. The earlier Kaggle Tesla T4 runs of notebook blob `0be7254` completed 16/16 cells only after a dependency-install restart (2 passes), so they are not one-pass `Run all` evidence. Promotion remains a separate evidence-review decision. See `docs/release-verification.md`.
 
 ## Licensing
 

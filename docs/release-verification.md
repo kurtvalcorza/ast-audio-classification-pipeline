@@ -1,6 +1,6 @@
 # Release verification
 
-`tutorials/ast_audio_classification_colab.ipynb` is a standalone `E2E` Candidate (`GUIDED`, DIMER Notebook Specification 2.2). The 2026-10-03 revision fixes the 2026-10-02 notebook review ([review](reviews/2026-10-02-notebook-review/ast_audio_classification_colab_Review.md); findings AST-M1–M3, AST-m1–m6). Its main change is that nothing is installed into the notebook kernel any more: a pinned `uv` builds an isolated, hash-locked Python 3.12.12 environment from `tutorials/requirements-colab.lock.txt`, and every stage of `tools/tutorial_stages.py` runs there in its own process. The revision has source checks, unit tests and a local CPU pre-flight; **no hosted run of it is recorded yet**. Candidate remains unchanged until hosted one-pass evidence is recorded and an explicit promotion decision is made.
+`tutorials/ast_audio_classification_colab.ipynb` is a standalone `E2E` Candidate (`GUIDED`, DIMER Notebook Specification 2.2). The 2026-10-03 revision fixes the 2026-10-02 notebook review ([review](reviews/2026-10-02-notebook-review/ast_audio_classification_colab_Review.md); findings AST-M1–M3, AST-m1–m6). Its main change is that nothing is installed into the notebook kernel any more: a pinned `uv` builds an isolated, hash-locked Python 3.12.12 environment from `tutorials/requirements-colab.lock.txt`, and every stage of `tools/tutorial_stages.py` runs there in its own process. The revision has source checks, unit tests, a local CPU pre-flight and one hosted Colab T4 default-path run (one pass, no restart, 0 errors); Kaggle, BYOD and activity runs are not recorded yet. Candidate remains unchanged until hosted one-pass evidence is recorded and an explicit promotion decision is made.
 
 ## Automatic coverage
 
@@ -41,6 +41,24 @@ Before promotion:
 
 ### Isolated-environment revision (2026-10-03)
 
+#### Hosted Colab T4 run (2026-10-03)
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Code cells | Wall time | Outcome |
+|---|---|---|---|---:|---:|---|
+| 2026-10-03 | `16eee3985381bd770acde9e1ac2a3a0cb060b76d` / `2f694197e54a2c548108d7be11ee1a32c3914942` | Colab CLI sequential execution (`colab exec -f`), fresh VM, Tesla T4 15,360 MiB; not a browser `Run all`, so the saved notebook has no execution counts; cell order is taken from `exec.log` (cells 1..15 in sequence) | default settings only (`USE_BYOD = False`, `USE_BYOD_DATASET = False`, `RUN_ACTIVITY = False`); no repository checkout | 15/15 | 172.6 s | **one pass, no restart, 0 errors**; executed code-cell sources identical to the blob; [retained evidence](verification/2026-10-03-colab-t4/) |
+
+Printed by the run: kernel Python 3.13.15; carrier verified 9 carried files, `NOTEBOOK_SOURCE` `d20a47c1d65e88b5890fe608fe6e0d309e37c087` (the generator stamp in `metadata.dimer.generated_from.revision`, parent of the run commit); isolated environment Python 3.12.12, torch `2.14.0+cu130`, torchaudio `2.11.0+cu130`, transformers `4.57.6`, 47 locked packages, `versions_match_lock: True`, device `cuda:0`, setup 67 s; snapshot `MIT/ast-finetuned-audioset-10-10-0.4593@f826b80d` 4/4 files verified; tone top label `Sine wave` 0.8288; 24 distinct generated clips (8 per class), over-long probe refused at 121.00 s; seeded 18/6 split, 0 train/evaluation duplicates; 3,843 trainable of 86,187,264 frozen backbone parameters; untrained head accuracy 0.0, training-majority baseline 0.3333; five epochs, train loss 0.9809 → 0.0059, evaluation accuracy 1.0 from epoch 1; 19,103-byte classifier-head adapter; held-out accuracy and macro-F1 1.0 (delta 0.6667 over majority), confusion matrix diagonal 2/2/2; unseen biophony clip ranked first at 0.9718; reload parity 21/21 scores on 7 clips, maximum difference 0.0 (`rtol=1e-5`, `atol=1e-6`), `PASSED`; bundle of 13 output files; activity skipped (optional). These are sample-sanity observations on generated clips, not field-recording or benchmark claims.
+
+| File | SHA-256 |
+|---|---|
+| `ast_audio_classification_colab_16eee39_colab-cli-t4_output.ipynb` | `63ba7c6a9d57967e37d2ad73688919a10de1d1df7b13bea1335dc90ac02f0be6` |
+| `run_summary.json` | `64db654c0d12511b76ce10f51316176feb5057ec3afdc83a707d39a27c32055b` |
+| `exec.log` | `065222f945de6b5dd782146b3bff3f3e6f7a780f83ea2ff66de885676f871a45` |
+
+Not exercised by this run: dataset BYOD (positive and negative ZIP), single-WAV BYOD, the evaluation-noise activity, and the equivalent Kaggle run.
+
+#### Local CPU pre-flight
+
 | Date | Source | Executor | Path | Observations | Qualification |
 |---|---|---|---|---|---|
 | 2026-10-03 | branch `review/ast_audio_classification_colab-2026-10-02` working tree (generator /3.0) | Windows, CPU only. The notebook's own carrier cell and `run_stage` helper were executed by a harness; a local uv virtual environment with CPython 3.12.12 and the CPU builds of the pinned packages (torch 2.14.0+cpu, torchaudio 2.11.0+cpu, transformers 4.57.6) stood in for the hash-locked Linux environment; real pinned weights | all learner cells in order, then the activity at 0, -10, -20 and -30 dB | runtime versions matched the lock; tone top label `Sine wave`; 24 distinct waveforms, 0 train/evaluation duplicates; untrained head accuracy 0.0, training-majority baseline 0.3333; five epochs, evaluation accuracy 1.0 from epoch 1; held-out accuracy and macro-F1 1.0; unseen biophony clip ranked first at 0.9718; reload parity 21/21 scores, maximum difference 0.0; activity: 0 dB unchanged, -10 dB and below moved all four biophony and anthrophony clips to geophony (accuracy 0.3333) | pre-flight only: not Linux, not the hash-locked install, not a hosted runtime, not promotion evidence |
@@ -72,7 +90,7 @@ The historical run used PyTorch `2.14.0+cu130`, verified every snapshot digest, 
 
 ## Current status
 
-**Candidate.** No hosted execution of the isolated-environment revision is recorded. The earlier Kaggle T4 runs of blob `0be7254` needed a restart (2 passes) and do not meet the one-pass `Run all` requirement. Before promotion: a fresh Colab T4 `Run all` of the revision under review in one pass, the equivalent Kaggle run, and recorded positive and negative dataset-BYOD runs and a single-WAV BYOD run through the downstream stages.
+**Candidate.** A hosted Colab T4 run of the isolated-environment revision (commit `16eee39`, blob `2f69419`) is recorded: default path, 15/15 code cells in one pass with no restart and 0 errors (Colab CLI sequential execution, not a browser `Run all`). The earlier Kaggle T4 runs of blob `0be7254` needed a restart (2 passes) and do not meet the one-pass `Run all` requirement. Before promotion: the equivalent Kaggle run, recorded positive and negative dataset-BYOD runs and a single-WAV BYOD run through the downstream stages, the activity run, and an explicit promotion decision.
 
 ## Sound-event classification workshop notebook
 

@@ -1,6 +1,6 @@
 # Release status
 
-Current status: **Candidate** — the standalone `E2E` tutorial's 2026-10-03 isolated-environment revision (review fixes AST-M1–M3, AST-m1–m6) has source validation, offline unit coverage and a local CPU pre-flight; no hosted run of it is recorded yet. The earlier Kaggle Tesla T4 runs needed a restart and are not one-pass `Run all` evidence. Promotion remains a separate reviewer/integrator decision.
+Current status: **Candidate** — the standalone `E2E` tutorial's 2026-10-03 isolated-environment revision (review fixes AST-M1–M3, AST-m1–m6) has source validation, offline unit coverage, a local CPU pre-flight and one hosted Colab T4 default-path run (15/15 code cells, one pass, no restart, 0 errors); Kaggle, BYOD and activity runs are not recorded yet. The earlier Kaggle Tesla T4 runs needed a restart and are not one-pass `Run all` evidence. Promotion remains a separate reviewer/integrator decision.
 
 The 2026-09-16 local CPU exercise ran all 16 generated code cells with the exact pins already installed. It used the deterministic 24-clip generated dataset, 18/6 stratified split, frozen backbone, seeded three-class head, five epochs, batch size 4, and learning rate `1e-3`. It observed held-out accuracy and macro-F1 of `1.0`, versus a `0.3333` majority baseline; predicted the unseen generated biophony clip correctly; wrote an approximately 19 KB classifier-head artifact; and reproduced its scores exactly after reload. These are narrow sample-sanity observations on synthetic data, not benchmark or field-recording evidence.
 
