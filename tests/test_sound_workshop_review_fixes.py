@@ -327,7 +327,7 @@ def test_byod_cell_displays_the_byod_run_not_the_canonical_run(tmp_path, capsys)
     _paired(byod, [], None)
     shown = _Display()
     namespace = _helpers(canonical, shown)
-    namespace["run_stage"] = lambda *args, **kwargs: None
+    namespace["run_stage"] = lambda *args, **kwargs: True  # the stage completed (SEC2-m2: False = refused)
     source = (
         _cell("code-18")
         .replace("RUN_BYOD = False", "RUN_BYOD = True")
