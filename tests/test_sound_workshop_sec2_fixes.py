@@ -206,7 +206,7 @@ def _fake_matplotlib(monkeypatch) -> None:
     monkeypatch.setitem(sys.modules, "matplotlib.pyplot", pyplot)
 
 
-def test_exported_summary_states_updates_in_the_selected_head(carried_root, monkeypatch) -> None:
+def _run_report(carried_root, monkeypatch, private_byod=False, records=()) -> str:
     import importlib.metadata
     import importlib.util
 
@@ -243,17 +243,21 @@ def test_exported_summary_states_updates_in_the_selected_head(carried_root, monk
         for i in range(2)
     ]
     _write(root, "scores.json", rows)
-    _write(root, "records.json", [])
+    _write(root, "records.json", list(records))
     _write(root, "configuration.json", {"class_names": names})
     _write(root, "reload_parity.json", {"passed": True})
-    _write(root, "prepare.json", {"private_byod": False})
+    _write(root, "prepare.json", {"private_byod": private_byod})
     history = [{"epoch": 0, "validation_macro_f1": 0.05, "optimizer_steps": 0}]
     history += [{"epoch": e, "validation_macro_f1": 1.0, "optimizer_steps": 60 * e} for e in range(1, 11)]
     _write(root, "training_history.json", history)
     _write(root, "selection.json", {"selected_epoch": 1, "validation_macro_f1": 1.0, "optimizer_steps": 600})
     (root / "stage_receipts.json").write_text("{}", encoding="utf-8")
     worker.report(root)
-    summary = (root / "outputs" / "summary.md").read_text(encoding="utf-8")
+    return (root / "outputs" / "summary.md").read_text(encoding="utf-8")
+
+
+def test_exported_summary_states_updates_in_the_selected_head(carried_root, monkeypatch) -> None:
+    summary = _run_report(carried_root, monkeypatch)
     assert "Selected epoch: 1 (validation macro-F1 1.000000)." in summary
     assert "Updates contained in the selected head: 60 of 600 performed in total." in summary
     assert "Epochs tied at the best validation macro-F1: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]." in summary
@@ -316,6 +320,7 @@ def test_infer_requires_complete_prepare_and_train_receipts(carried_root, tmp_pa
         worker, "load_pipe", lambda root: pytest.fail("loaded a model without a train receipt")
     )
     (carried_root / "outputs").mkdir(exist_ok=True)
+    (tmp_path / "x.wav").write_bytes(b"")  # exists; read_audio is a stand-in
     with pytest.raises(RuntimeError, match=r"stage 'infer' needs stage 'prepare'.*\(Section 2\)"):
         worker.infer(carried_root, tmp_path / "x.wav")
     receipts = {
@@ -355,3 +360,187 @@ def test_post_generation_revision_2026_10_13_is_recorded() -> None:
     assert revision["carried_files_changed"] == ["workshop.py", "source.json"]
     worker = _carried()["workshop.py"]
     assert "REFUSED_EXIT = 65" in worker
+
+
+# ---------------------------------------------------------------- peer-review follow-up (CX1-CX9)
+
+_TEST_RECORDS = [
+    {"role": "test", "group_id": "a"},
+    {"role": "test", "group_id": "a"},
+    {"role": "test", "group_id": "b"},
+    {"role": "train", "group_id": "c"},
+]
+
+
+def test_default_summary_carries_its_own_qualifications(carried_root, monkeypatch) -> None:
+    summary = _run_report(carried_root, monkeypatch, records=_TEST_RECORDS)
+    for needle in (
+        "Backbone: frozen MIT/ast-finetuned-audioset-10-10-0.4593 at revision f826b80d2822",
+        "whose 527 labels include all ten ESC-10 categories",
+        "only the new classifier head (its LayerNorm and linear layer)",
+        "'initial' is that head at its seeded random initialization",
+        "Scope: 3 test clips from 2 source recordings on this fixed split",
+        "with one training seed (42)",
+        "training data is unresolved",
+        "beating the random head is not an improvement over pretrained AST",
+    ):
+        assert needle in summary
+
+
+def test_byod_summary_uses_dataset_specific_wording(carried_root, monkeypatch) -> None:
+    summary = _run_report(carried_root, monkeypatch, private_byod=True, records=_TEST_RECORDS)
+    assert "whether your classes are covered by those labels is not checked here" in summary
+    assert "Scope: 3 test clips from 2 recording groups in your manifest's split" in summary
+    assert "ESC" not in summary
+
+
+_MISSING_AUDIO = {
+    "class_names": ["bird", "car"],
+    "records": [{"id": "a", "audio": "missing.wav", "label": "bird", "group_id": "g", "role": "train"}],
+}
+
+
+@pytest.mark.parametrize(
+    ("manifest", "rule"),
+    [
+        ({"records": []}, "missing required key(s) ['class_names']"),
+        ({"class_names": ["bird", "car"]}, "missing required key(s) ['records']"),
+        ({"class_names": ["bird", "car"], "records": None}, "records must be a list of 1-400 record objects"),
+        (
+            {"class_names": ["bird", "car"], "records": {"a": 1}},
+            "records must be a list of 1-400 record objects",
+        ),
+        ({"class_names": "bird", "records": [{}]}, "class_names must be a list"),
+        ({"class_names": ["bird", "car"], "records": [None]}, "manifest record 0 must be an object"),
+        ([1, 2], "must be a JSON object"),
+        (_MISSING_AUDIO, "audio file 'missing.wav' not found under BYOD_PATH"),
+    ],
+)
+def test_malformed_manifest_is_refused_cleanly(carried_root, tmp_path, capsys, manifest, rule) -> None:
+    byod = tmp_path / "my_sounds"
+    byod.mkdir()
+    (byod / "manifest.json").write_text(json.dumps(manifest))
+    assert _run_stage(carried_root, "prepare", "--byod", str(byod)) is False
+    _assert_one_clean_refusal(capsys.readouterr().out, rule)
+
+
+def test_invalid_json_manifest_is_refused_cleanly(carried_root, tmp_path, capsys) -> None:
+    byod = tmp_path / "my_sounds"
+    byod.mkdir()
+    (byod / "manifest.json").write_text("{not json")
+    assert _run_stage(carried_root, "prepare", "--byod", str(byod)) is False
+    _assert_one_clean_refusal(capsys.readouterr().out, "manifest.json is not valid UTF-8 JSON")
+
+
+def _load_worker(carried_root: Path, name: str):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(name, carried_root / "workshop.py")
+    worker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(worker)
+    return worker
+
+
+def _worker_main(carried_root: Path, tmp_path: Path, monkeypatch, worker, failure: Exception):
+    _wav(tmp_path / "my_sounds" / "a.wav", 1.0, 3)
+    record = {"id": "a", "audio": "a.wav", "label": "bird", "group_id": "g", "role": "train"}
+    byod = _manifest(tmp_path / "my_sounds", ["bird", "car"], [record])
+
+    def failing_prepare(root, directory):
+        raise failure
+
+    monkeypatch.setattr(worker, "prepare", failing_prepare)
+    argv = ["workshop.py", "--root", str(carried_root), "--stage", "prepare", "--byod", str(byod)]
+    monkeypatch.setattr(sys, "argv", argv)
+
+
+def test_failure_after_successful_validation_still_raises(
+    carried_root, tmp_path, monkeypatch, capsys
+) -> None:
+    worker = _load_worker(carried_root, "sec2_worker_main")
+    _worker_main(carried_root, tmp_path, monkeypatch, worker, ValueError("figure backend failed"))
+    with pytest.raises(ValueError, match="figure backend failed"):
+        worker.main()
+    assert "Refused" not in capsys.readouterr().out
+    receipts = json.loads((carried_root / "stage_receipts.json").read_text())
+    assert receipts["stages"]["prepare"]["status"] == "failed"
+
+
+def test_wrapped_recording_violation_is_still_a_refusal(carried_root, tmp_path, monkeypatch, capsys) -> None:
+    worker = _load_worker(carried_root, "sec2_worker_cause")
+    try:
+        try:
+            raise worker.InputRefused("WAV duration must be 0.5-10 seconds")
+        except worker.InputRefused as cause:
+            raise ValueError("record 'a' (a.wav): WAV duration must be 0.5-10 seconds") from cause
+    except ValueError as wrapped:
+        failure = wrapped
+    _worker_main(carried_root, tmp_path, monkeypatch, worker, failure)
+    with pytest.raises(SystemExit) as exit_info:
+        worker.main()
+    assert exit_info.value.code == REFUSED_EXIT
+    assert capsys.readouterr().out.count("WAV duration must be 0.5-10 seconds") == 1
+    receipts = json.loads((carried_root / "stage_receipts.json").read_text())
+    assert receipts["stages"]["prepare"]["status"] == "refused"
+
+
+def test_missing_unlabelled_recording_is_refused_cleanly(carried_root, tmp_path, capsys) -> None:
+    assert _run_stage(carried_root, "infer", "--audio", str(tmp_path / "nowhere.wav")) is False
+    _assert_one_clean_refusal(capsys.readouterr().out, "nowhere.wav: file not found")
+
+
+def _noise_rows() -> list[dict]:
+    predictions = {"clean": (0, 0), "20": (0, 0), "10": (0, 0), "0": (1, 1)}
+    rows = []
+    for index, (clip, label) in enumerate((("a", 0), ("b", 1))):
+        for condition, predicted in predictions.items():
+            rows.append(
+                {
+                    "id": clip,
+                    "label": label,
+                    "condition": condition,
+                    "predicted": predicted[index],
+                    "gain": 0.5 if clip == "a" else 0.25,
+                    "peak": 0.4,
+                    "clipped_samples": 0,
+                    "actual_snr_db": None if condition == "clean" else float(condition) + 0.01,
+                }
+            )
+    return rows
+
+
+def test_noise_display_shows_controls_and_paired_outcomes(tmp_path, capsys) -> None:
+    _write(tmp_path, "noise_records.json", _noise_rows())
+    summary = [{"condition": "clean", "accuracy": 0.5, "macro_f1": 0.33, "changed_predictions": 0}]
+    _write(tmp_path, "noise_summary.json", summary)
+    shown = _Display()
+    _helpers(tmp_path, shown)["show_noise"]()
+    text = shown.markdown()
+    assert "| clean | 2 | none added (matched clean) | 0.2500 to 0.5000 | 0.4000 | 0 |" in text
+    assert "| 0 | 2 | 0.01 to 0.01 | 0.2500 to 0.5000 | 0.4000 | 0 |" in text
+    assert "| 0 | 1 | 1 | 0 | 0 |" in text  # clip b corrected, clip a newly wrong
+    assert "| 20 | 0 | 0 | 1 | 1 |" in text
+    out = capsys.readouterr().out
+    assert "These are 2 reused validation clips (two per class), not new held-out evidence." in out
+    assert "show_noise()" in _cell("code-14") and "show_noise(byod_root)" in _cell("code-18")
+    assert "so it is not a count of new errors" in _cell("md-15")
+
+
+def test_audio_figures_use_fixed_shared_scales() -> None:
+    source = _carried()["workshop.py"]
+    assert "WAVEFORM_LIMITS = (-1.0, 1.0)" in source and "FBANK_LIMITS = (-16.0, 11.0)" in source
+    assert "ylim=WAVEFORM_LIMITS" in source and "vmin=FBANK_LIMITS[0], vmax=FBANK_LIMITS[1]" in source
+    assert 'label="Log filterbank energy (fixed scale)"' in source
+
+
+def test_follow_up_prose() -> None:
+    md11 = _cell("md-11")
+    assert "If epoch zero is selected, the exported head is the unchanged initial head." in md11
+    assert "If test performance worsens, report that outcome." in md11
+    assert "remains the evidence that the new head learned" not in md11
+    assert "beating the random head is not an improvement over pretrained AST" in _cell("md-07")
+    assert "**How precise are these numbers?**" in _cell("md-17")
+    md21 = _cell("md-21")
+    assert "233 clips tagged CC0, 165 tagged CC BY and two tagged CC Sampling+" in md21
+    assert "304 unique source recordings: 180 tagged CC0, 122 CC BY and 2 CC Sampling+" in md21
+    assert "is unresolved" in md21
