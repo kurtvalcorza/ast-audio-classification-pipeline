@@ -33,3 +33,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+# Carried byte-for-byte into the sound workshop notebook (its sha256 is pinned there); reformatting it would
+# change the notebook, so only line length is exempted.
+"tools/sound_workshop_source.py" = ["E501"]

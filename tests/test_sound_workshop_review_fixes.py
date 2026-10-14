@@ -325,9 +325,14 @@ def test_byod_cell_displays_the_byod_run_not_the_canonical_run(tmp_path, capsys)
         [{"condition": "clean", "accuracy": 0.75, "macro_f1": 0.7, "changed_predictions": 0}],
     )
     _paired(byod, [], None)
+    _write(byod, "noise_records.json", [
+        {"id": "v1", "condition": c, "label": 0, "predicted": 0, "gain": 0.5, "peak": 0.4,
+         "clipped_samples": 0, "actual_snr_db": None if c == "clean" else float(c)}
+        for c in ("clean", "20", "10", "0")
+    ])  # the noise display reads the per-clip controls (peer-review follow-up CX4)
     shown = _Display()
     namespace = _helpers(canonical, shown)
-    namespace["run_stage"] = lambda *args, **kwargs: None
+    namespace["run_stage"] = lambda *args, **kwargs: True  # the stage completed (SEC2-m2: False = refused)
     source = (
         _cell("code-18")
         .replace("RUN_BYOD = False", "RUN_BYOD = True")

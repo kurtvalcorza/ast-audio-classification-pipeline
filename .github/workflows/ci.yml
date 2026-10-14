@@ -30,6 +30,8 @@ jobs:
         run: python tools/validate_release_assets.py
       - name: Standalone notebook parity (NOTEBOOK_SPEC 1.1 PAR3)
         run: python tools/build_notebook.py --check
+      - name: Sound event workshop generation parity (NOTEBOOK_SPEC SRC13)
+        run: python tools/build_sound_workshop.py --check
 
   release-evidence-boundary:
     runs-on: ubuntu-latest

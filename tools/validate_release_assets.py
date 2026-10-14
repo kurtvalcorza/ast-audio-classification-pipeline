@@ -829,6 +829,10 @@ def validate_workshop_notebooks() -> None:
         _check(row is not None, f"{name} missing from tutorials/README.md")
         for needle in (f"`{spec['profile']}`", "`WORKSHOP`", "Candidate"):
             _check(needle in row, f"tutorials/README.md row for {name} must record {needle}")
+        # SRC13: the generator named in generated_from is in tools/; CI runs its --check for byte parity with the
+        # committed notebook (generator_sha256 records the revision that first built it, not the current file).
+        generator = ROOT / "tools" / str(generated.get("generator", "")).split("/")[0]
+        _check(generator.is_file(), f"{name}: generator {generated.get('generator')!r} is not in tools/")
 
 
 def validate_all() -> list[str]:

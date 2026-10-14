@@ -12,5 +12,12 @@ docs/verification/2026-09-16-kaggle-t4/**/outputs/*.csv whitespace=cr-at-eol
 # Snapshot files are digest-verified byte-for-byte against dimer-base-manifest.json; never convert their line endings.
 weights/** -text
 
+# Pinned ESC-50 attribution and metadata are digest-checked against the sound workshop sample manifest.
+tools/sound_workshop_attribution.txt -text
+tools/sound_workshop_metadata.csv -text
+
 # Colab CLI T4 run evidence is digest-verified and must remain byte-exact.
 docs/verification/2026-10-03-colab-t4/** -text
+
+# Colab CLI execution evidence under docs/execution-evidence is digest-verified and must remain byte-exact.
+docs/execution-evidence/** -text
