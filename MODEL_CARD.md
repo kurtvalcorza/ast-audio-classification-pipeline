@@ -89,8 +89,8 @@ No result here is suitable for autonomous decisions about a person's health, saf
 1. The package pins the model ID and 40-character revision, checks every local snapshot file against recorded byte length and SHA-256, loads locally with remote code disabled, and only permits a revision-pinned download when explicitly enabled.
 2. Input and dataset validators reject malformed shape, dtype, amplitude, finiteness, rate, duration, duplicate ID, label, class-name, or class-coverage conditions before adaptation.
 3. The split is seeded, stratified, disjoint, and guarantees at least one record from every class on each side.
-4. Adaptation refuses to begin while the backbone remains trainable. The exported artifact contains only classifier parameters and records the class order, activation, training settings, and exact base lineage.
-5. Artifact reload uses `torch.load(..., weights_only=True)`, validates its schema and identity, reconstructs the head, and can be checked numerically against pre-export predictions.
+4. Adaptation refuses to begin while the backbone remains trainable. The exported artifact is a safetensors file holding only classifier parameters (no pickle), with a plain-JSON sidecar that records the class order, activation, training settings, exact base lineage and the SHA-256 of the weights file.
+5. Artifact reload reads the JSON sidecar, validates its schema and identity, checks the weights file against the recorded SHA-256 before opening it, reads the tensors with `safetensors.torch.load_file`, reconstructs the head with `load_state_dict(strict=True)`, and can be checked numerically against pre-export predictions. A `.pt` path is refused.
 6. The notebook labels synthetic metrics as sample sanity, reports the majority baseline, keeps uploads disabled by default, bounds ZIP resources, rejects unsafe member paths, and never extracts the archive.
 
 ###### Risks and harms
@@ -109,7 +109,7 @@ Prohibited uses include covert surveillance, speaker or demographic profiling, f
 - `model.safetensors` SHA-256: `ae0c1e2ad4e1381d851fa9bf298ba13ebc9c5a914cdee2dbe427a6583869924d`
 - `config.json` SHA-256: `a93d525511d77e8ecc933d09674b85099815bbbb417c228a4edd655e252fb9ff`
 - `preprocessor_config.json` SHA-256: `8d04ba5a9c6fca5d39d0de2b1fd05ecf79deb589fbba279728bbebac39934231`
-- Adapter format: `org.valcorza.ast-audio.adapter.v1`, format version `1.0`; classifier state only, not a standalone model
+- Adapter format: `org.valcorza.ast-audio.adapter.v1`, format version `2.0`: `<name>.safetensors` (classifier state dict only) plus a `<name>.json` sidecar (metadata and weights SHA-256); not a standalone model. Format `1.0` (a `torch.save` `.pt` file) is no longer written or read.
 
 ## Input/output contract
 
@@ -118,7 +118,7 @@ Prohibited uses include covert surveillance, speaker or demographic profiling, f
 - `synthetic_audio_dataset`, `validate_dataset`, and `split_dataset` implement the owner-namespaced waveform dataset contract `io.github.kurtvalcorza.dataset.audio.waveform-classification.v1`.
 - `rehead(class_names, seed)`, `freeze_backbone()`, and `finetune(...)` perform classifier-head adaptation. The training records must already be valid 16 kHz labelled records covering every declared class.
 - Adapted `predict()` returns rank-ordered `softmax` scores across the active class vocabulary; `evaluate()` consumes labelled records and returns multiclass metrics plus the majority baseline.
-- `save_artifact(path)` writes the classifier-only adapter. `load_artifact(path)` rejects a format, version, kind, model ID, revision, activation, vocabulary, or tensor-shape mismatch and refreshes inference after loading.
+- `save_artifact(path)` writes the classifier-only adapter as safetensors plus its JSON sidecar and refuses any path that does not end in `.safetensors`. `load_artifact(path)` rejects a `.pt` path, a missing sidecar, a weights digest mismatch, or a format, version, kind, model ID, revision, activation, vocabulary, or tensor-shape mismatch, and refreshes inference after loading.
 - Base ceilings: `SAMPLE_RATE = 16000`, `MAX_AUDIO_SECONDS = 10.24`, `MAX_INPUT_SECONDS = 120.0`, `MIN_AUDIO_SECONDS = 0.025`, `NUM_LABELS = 527`.
 
 ## Runtime

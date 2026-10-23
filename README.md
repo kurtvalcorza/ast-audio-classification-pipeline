@@ -35,7 +35,7 @@ history = pipe.finetune(
     seed=42,
 )
 report = pipe.evaluate(val_records)
-pipe.save_artifact("outputs/ast-audio-adapter-v1.pt")
+pipe.save_artifact("outputs/ast-audio-adapter-v1.safetensors")  # + ast-audio-adapter-v1.json sidecar
 ```
 
 The default sample has 24 generated clips and a deterministic stratified 18/6 train/validation split. Frozen backbone features are cached once; AdamW updates only the 3,843-parameter classifier head. `evaluate()` reports accuracy, macro-F1, per-class metrics, a confusion matrix, and the delta from the majority-class baseline.
@@ -46,7 +46,7 @@ The generated dataset uses the owner-namespaced representation `io.github.kurtva
 
 Before re-heading, `predict()` takes a 1-D float array in `[-1, 1]` plus its source sample rate and returns ranked independent sigmoid scores over the 527 AudioSet labels. Non-16 kHz input is resampled. Only the first 10.24 seconds reach the model, clips longer than 120 seconds are rejected, and truncation is reported explicitly. Because the repository has no AudioSet-labelled evaluation corpus, `evaluation_report()` for this base path remains `not-measurable`.
 
-After re-heading, predictions are a softmax distribution over the ordered target vocabulary. The saved `org.valcorza.ast-audio.adapter.v1` artifact contains only the classifier state, target classes, adaptation settings, and exact base-model lineage; a fresh load reconstructs the pinned base model and safely reads the artifact with `weights_only=True`.
+After re-heading, predictions are a softmax distribution over the ordered target vocabulary. The saved `org.valcorza.ast-audio.adapter.v1` artifact (format version `2.0`) is a safetensors file holding only the classifier state dict, plus a plain-JSON sidecar `<name>.json` with the target classes, adaptation settings, exact base-model lineage and the SHA-256 of the weights file. No pickle is written: `save_artifact` refuses a path that does not end in `.safetensors`. A fresh load reconstructs the pinned base model, checks the sidecar and the weights digest before reading any tensor, reads the weights with `safetensors.torch.load_file` and applies them with `load_state_dict(strict=True)`; a `.pt` path is refused.
 
 ## Weights layout
 

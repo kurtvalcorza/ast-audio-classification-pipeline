@@ -139,13 +139,25 @@ RUNNER_MARKERS = (
     "error_file.write_text(json.dumps(",
     'print(f"STAGE FAILED ({options.stage}): {type(exc).__name__}: {message}", flush=True)',
 )
+# What the carried package must do to export and reload the adapter as safetensors plus a JSON sidecar (the
+# safe-format rule: weights are never published only as a pickle). Checked on the carried pipeline.py.
+PIPELINE_ARTIFACT_MARKERS = (
+    "from safetensors.torch import save_file",
+    "save_file(state, str(partial)",
+    "if out.suffix != ARTIFACT_WEIGHTS_SUFFIX:",
+    "from safetensors.torch import load_file",
+    "if weights_path.suffix != ARTIFACT_WEIGHTS_SUFFIX:",
+    "if actual != expected:",
+    "classifier_state = load_file(str(weights_path)",
+    "classifier.load_state_dict(classifier_state, strict=True)",
+)
 # Machine-readable artifacts the stages must write (OUT1-OUT3, DAT24, EVAL21).
 EXPECTED_OUTPUTS = (
     "_input_manifest.json",
     "_evaluation_report.json",
     "_result.json",
     "_top_k.csv",
-    'ADAPTER = "ast-audio-adapter-v1.pt"',
+    'ADAPTER = "ast-audio-adapter-v1.safetensors"',
     "_reload_parity.json",
 )
 # Profile-specific learner-facing statements (AST-m1, AST-m2, AST-m5 among them).
@@ -267,6 +279,15 @@ COMMON_MARKDOWN_MARKERS = (
     "## References",
     f"- Repository model card: https://github.com/kurtvalcorza/{REPO_NAME}/blob/main/MODEL_CARD.md",
 )
+PICKLE_EXPORT = (
+    "pickle artifact export",
+    re.compile(
+        r"\btorch\.save\s*\(|\bpickle\.dumps?\s*\("
+        r"|\w\s*/\s*['\"][^'\"\n]*\.(?:pt|pth|bin|ckpt)['\"]"
+        r"|\bADAPTER\s*=\s*['\"][^'\"\n]*\.(?:pt|pth|bin|ckpt)['\"]"
+        r"|save_artifact\([^)\n]*\.(?:pt|pth|bin|ckpt)['\"]"
+    ),
+)
 FORBIDDEN_PATTERNS = (
     ("credential in clone URL", re.compile(r"https://[^/'\"\s]*@github\.com/|x-access-token:")),
     ("repository clone (ST1)", re.compile(r"\bgit\b[^\n]*\bclone\b|github\.com")),
@@ -283,6 +304,9 @@ FORBIDDEN_PATTERNS = (
             r"|getattr\(\s*torch\s*,\s*['\"]load['\"]"
         ),
     ),
+    # The exported adapter is a safetensors state dict plus a JSON sidecar. No cell or carried file may write a
+    # pickle again: no torch.save, no pickle.dump, and no `.pt`/`.pth`/`.bin`/`.ckpt` file named as an output.
+    PICKLE_EXPORT,
     ("archive extractall", re.compile(r"\.extractall\s*\(")),
     ("notebook magic or shell escape", re.compile(r"(?m)^\s*[%!]|get_ipython\(\)")),
     ("unhashed or source install", re.compile(r"--no-binary|--no-build-isolation|--trusted-host|--extra-index-url")),
@@ -680,6 +704,9 @@ def _validate_notebook_content(path: Path, notebook: dict, code_cells: list[tupl
     runner = files[_load_tool("notebook_template").TEMPLATE["stage_runner"]]
     missing = [marker for marker in RUNNER_MARKERS if marker not in runner]
     _check(not missing, f"{path.name}: the carried stage runner is missing required markers: {missing}")
+    pipeline = files[f"src/{PACKAGE}/pipeline.py"]
+    missing = [marker for marker in PIPELINE_ARTIFACT_MARKERS if marker not in pipeline]
+    _check(not missing, f"{path.name}: the carried pipeline.py is missing safetensors artifact markers: {missing}")
     missing = [name for name in EXPECTED_OUTPUTS if name not in runner]
     _check(not missing, f"{path.name}: the stage runner must export {missing}")
     _validate_gates(path, code_cells)
@@ -814,6 +841,9 @@ def validate_workshop_notebooks() -> None:
         for carried, text in files.items():
             actual = hashlib.sha256(text.encode("utf-8")).hexdigest()
             _check(actual == hashes[carried], f"{name}: carried {carried} does not match its CARRIED_HASHES digest")
+        for carried, text in files.items():
+            if carried.endswith(".py"):
+                _check(not PICKLE_EXPORT[1].search(text), f"{name}: carried {carried} exports a pickle artifact")
         for carried, source in spec["parity"].items():
             committed = (ROOT / source).read_bytes().decode("utf-8").replace("\r\n", "\n")
             _check(files.get(carried) == committed, f"{name}: carried {carried} differs from {source}")

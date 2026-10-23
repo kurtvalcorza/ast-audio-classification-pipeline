@@ -206,7 +206,12 @@ REVISIONS = [{'date': '2026-10-02',
   'method': 'fix_cx.py: anchor-asserting replacements (each anchor matched exactly once) on blob 76c4ac7; '
             'prepare/train/reload/activity asserted AST-identical; CARRIED_FILES re-serialised with '
             'tools/split_workshop_carrier.py carried_literal; carried hashes, the carried source.json and '
-            'generated_from.files updated together; generator not in this repository'}]
+            'generated_from.files updated together; generator not in this repository'},
+ {'date': '2026-10-24',
+  'reason': 'Export the selected head as safetensors plus a JSON sidecar instead of a torch.save pickle (safe-format rule; ARTIFACT_SPEC 2.0 SER7/SER10-SER12)',
+  'cells': ['code-03', 'md-11'],
+  'carried_files_changed': ['ast_reference/__init__.py', 'ast_reference/pipeline.py', 'workshop.py', 'source.json'],
+  'method': 'regenerated from the in-repository generator tools/build_sound_workshop.py (CI --check byte parity); not a post-generation edit; RECORDED_GENERATOR left at the first revision (see the module docstring)'}]
 
 CELLS = [
     # md-00
@@ -521,9 +526,9 @@ Training evidence records exact trainable names/counts, actual updates, finite l
 
 ## 6. Reload the selected artifact in a fresh process
 
-**Input:** selected classifier `.pt`, SHA-256 manifest, exact base identity and ordered vocabulary. **System:** a new process using `weights_only=True`, schema/finiteness checks and fresh waveform-to-feature inference. **Output:** prediction and metric parity checks.
+**Input:** selected classifier `selected_head.safetensors` with its JSON sidecar `selected_head.json`, SHA-256 manifest, exact base identity and ordered vocabulary. **System:** a new process that checks both digests before reading any tensor, `safetensors.torch.load_file`, schema/finiteness checks and fresh waveform-to-feature inference. **Output:** prediction and metric parity checks.
 
-This is the existing classifier-only PyTorch artifact format, **not safetensors**. Base weights are not included. Wrong label order, base, activation, tensor schema or digest must be refused. No unrestricted pickle fallback is allowed.
+The artifact is a classifier-only **safetensors** state dict (tensors only, no pickle, nothing that runs code when it is read) plus a plain-JSON sidecar with the lineage, vocabulary and weights SHA-256. Base weights are not included. Wrong label order, base, activation, tensor schema or digest must be refused. No pickle is read.
 
 Fixed tolerances: logits `atol=1e-5, rtol=1e-4`; probabilities `atol=1e-6, rtol=1e-4`; identical top-one labels/confusion counts; accuracy and macro-F1 drift at most `1e-12`.
 

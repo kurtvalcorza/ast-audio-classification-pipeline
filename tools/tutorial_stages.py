@@ -41,7 +41,7 @@ VAL_FRACTION = 0.25
 TOP_K_BASE = 5
 UNSEEN_INDEX = 99
 UNSEEN_CLASS = 1  # biophony
-ADAPTER = "ast-audio-adapter-v1.pt"
+ADAPTER = "ast-audio-adapter-v1.safetensors"  # weights; the JSON sidecar ast-audio-adapter-v1.json sits beside it
 LOCK = "requirements.txt"
 SNAPSHOT_KEY = "ast-audioset"
 PARITY_RTOL = 1e-5
@@ -509,7 +509,7 @@ def stage_finetune(run: Run) -> None:
     run.write_state("adapter.json", {"path": str(artifact), "bytes": artifact.stat().st_size, "sha256": sha256_file(artifact)})
     for row in history:
         print(f"Epoch {row['epoch']}/{opts.epochs}: train_loss={row['train_loss']:.4f}  evaluation_accuracy={row['evaluation_accuracy']:.4f}  steps={row['steps']}")
-    print({"adapter": artifact.name, "bytes": artifact.stat().st_size, "sha256": sha256_file(artifact)[:16] + "...", "contains": "classifier head only (the frozen backbone is rebuilt from the pinned base revision)"})
+    print({"adapter": artifact.name, "bytes": artifact.stat().st_size, "sha256": sha256_file(artifact)[:16] + "...", "sidecar": artifact.with_suffix(".json").name, "format": "safetensors state dict + JSON sidecar", "contains": "classifier head only (the frozen backbone is rebuilt from the pinned base revision)"})
 
 
 def stage_evaluate(run: Run) -> None:

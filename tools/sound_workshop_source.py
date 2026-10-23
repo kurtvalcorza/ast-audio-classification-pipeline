@@ -782,13 +782,16 @@ def train(root):
             )
     write_json(root / "outputs/metrics.json", reports)
     pipe.adaptation_config.update({"recipe": RECIPE, "selection": selection})
-    path = pipe.save_artifact(root / "outputs/selected_head.pt")
-    from ast_reference.pipeline import MODEL_ID, MODEL_REVISION
+    # Safetensors state dict (no pickle) plus the repository's plain-JSON sidecar selected_head.json beside it.
+    path = pipe.save_artifact(root / "outputs/selected_head.safetensors")
+    from ast_reference.pipeline import MODEL_ID, MODEL_REVISION, artifact_sidecar_path
 
     write_json(
         root / "outputs/adapter_manifest.json",
         {
+            "format": "safetensors state dict + JSON sidecar",
             "sha256": digest(path),
+            "sidecar_sha256": digest(artifact_sidecar_path(path)),
             "base_model_id": MODEL_ID,
             "base_model_revision": MODEL_REVISION,
             "class_names": names,
@@ -823,13 +826,16 @@ def verify_parity(live, reloaded):
 
 def strict_load(root, pipe):
     import torch
-    from ast_reference.pipeline import MODEL_ID, MODEL_REVISION
+    from ast_reference.pipeline import MODEL_ID, MODEL_REVISION, artifact_sidecar_path
+    from safetensors.torch import load_file
 
     manifest = read_json(root / "outputs/adapter_manifest.json")
     names = read_json(root / "outputs/configuration.json")["class_names"]
-    path = root / "outputs/selected_head.pt"
+    path = root / "outputs/selected_head.safetensors"
+    sidecar = artifact_sidecar_path(path)
     if (
         digest(path) != manifest["sha256"]
+        or digest(sidecar) != manifest["sidecar_sha256"]
         or manifest["class_names"] != names
         or manifest["activation"] != "softmax"
         or manifest["base_model_id"] != MODEL_ID
@@ -840,12 +846,13 @@ def strict_load(root, pipe):
         "extractor_sha256"
     ] or pipe.extractor.to_dict() != read_json(root / "outputs/extractor.json"):
         raise ValueError("extractor identity changed")
-    payload = torch.load(path, map_location="cpu", weights_only=True)
+    # The sidecar is plain JSON and both digests matched above, so the weights are read only now, as tensors.
+    payload = read_json(sidecar)
     if payload["class_names"] != names or payload["activation"] != "softmax":
         raise ValueError("payload vocabulary or activation mismatch")
     pipe.rehead(names, seed=SEED)
     expected = pipe.model.classifier.state_dict()
-    state = payload["classifier_state_dict"]
+    state = load_file(str(path), device="cpu")
     if set(state) != set(expected):
         raise ValueError("adapter tensor names mismatch")
     for key, tensor in state.items():
@@ -856,7 +863,7 @@ def strict_load(root, pipe):
             or not torch.isfinite(tensor).all()
         ):
             raise ValueError("adapter tensor schema or finiteness mismatch")
-    # Real repository loader used after stricter checks; no unrestricted pickle fallback.
+    # Real repository loader used after stricter checks; it re-checks the sidecar digest. No pickle is read.
     pipe.load_artifact(path)
     return pipe
 
@@ -1102,7 +1109,8 @@ def report(root):
         "scores.json",
         "scores.csv",
         "metrics.json",
-        "selected_head.pt",
+        "selected_head.safetensors",
+        "selected_head.json",
         "adapter_manifest.json",
         "reload_scores.json",
         "reload_parity.json",
@@ -1195,7 +1203,8 @@ STAGE_FILES = {
         "selection.json",
         "scores.json",
         "metrics.json",
-        "selected_head.pt",
+        "selected_head.safetensors",
+        "selected_head.json",
         "adapter_manifest.json",
         "extractor.json",
     ],

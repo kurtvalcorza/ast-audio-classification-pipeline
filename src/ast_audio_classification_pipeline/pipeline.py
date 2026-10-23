@@ -28,7 +28,41 @@ NUM_LABELS = 527  # AudioSet ontology classes in the pinned config.json
 DEFAULT_TOP_K = 5
 ACTIVATION = "sigmoid"
 ARTIFACT_FORMAT = "org.valcorza.ast-audio.adapter.v1"
-ARTIFACT_FORMAT_VERSION = "1.0"
+# Version 2.0 is the safetensors export: the classifier weights are a `.safetensors` state dict (tensors
+# only, no pickle, nothing that runs code when it is read) and the metadata is a plain-JSON sidecar
+# `<name>.json` beside it, recording the SHA-256 of the weights file. Version 1.0 was a single `torch.save`
+# pickle; it is no longer written or read.
+ARTIFACT_FORMAT_VERSION = "2.0"
+ARTIFACT_WEIGHTS_SUFFIX = ".safetensors"
+ARTIFACT_SIDECAR_SUFFIX = ".json"
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def _json_default(value: Any) -> Any:
+    if isinstance(value, np.generic):
+        return value.item()
+    if isinstance(value, np.ndarray):
+        return value.tolist()
+    if isinstance(value, Path):
+        return str(value)
+    raise TypeError(f"artifact metadata value of type {type(value).__name__} is not plain JSON")
+
+
+def _plain_json(value: Any) -> Any:
+    """Return ``value`` as plain JSON (numpy scalars and arrays become numbers and lists); refuse the rest."""
+    return json.loads(json.dumps(value, allow_nan=False, default=_json_default))
+
+
+def artifact_sidecar_path(artifact_path: str | Path) -> Path:
+    """The JSON sidecar that sits beside a `.safetensors` adapter (`<name>.json`)."""
+    return Path(artifact_path).with_suffix(ARTIFACT_SIDECAR_SUFFIX)
 
 
 def verify_snapshot(path: str | Path | None = None) -> dict[str, Any]:
@@ -540,43 +574,98 @@ class ASTAudioClassificationPipeline:
         return evaluate_classification(predictions, targets, self.labels)
 
     def save_artifact(self, output_path: str | Path) -> Path:
-        """Export adapted weights, vocabulary, base model lineage, and artifact metadata."""
+        """Export the adapted classifier head as a safetensors state dict plus a plain-JSON sidecar.
+
+        ``output_path`` must end in ``.safetensors``. That file holds the classifier state dict only,
+        written with ``safetensors.torch.save_file`` (tensors, no pickle, nothing that runs code when read).
+        The sidecar ``<name>.json`` beside it holds the format tag, base-model lineage, ordered class names,
+        activation, adaptation settings and the SHA-256 of the weights file, which ``load_artifact`` checks
+        before it opens the weights. No ``.pt`` is written. Returns the path of the weights file.
+        """
+        import os
+
         import torch
+        from safetensors.torch import save_file
 
         if self.model is None:
             raise RuntimeError("cannot save artifact without an underlying torch model")
 
         out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
+        if out.suffix != ARTIFACT_WEIGHTS_SUFFIX:
+            raise ValueError(
+                f"artifact path {out.name!r} must end in {ARTIFACT_WEIGHTS_SUFFIX}; the adapter is exported "
+                "as safetensors, never as a pickle"
+            )
 
         if self.activation != "softmax" or len(self.labels) == NUM_LABELS:
             raise RuntimeError("artifact export requires an adapted single-label classifier")
 
-        payload = {
-            "format": ARTIFACT_FORMAT,
-            "format_version": ARTIFACT_FORMAT_VERSION,
-            "artifact_kind": "classifier-head-adapter",
-            "base_model_id": MODEL_ID,
-            "base_model_revision": MODEL_REVISION,
-            "class_names": list(self.labels),
-            "num_classes": len(self.labels),
-            "activation": self.activation,
-            "adaptation": dict(self.adaptation_config),
-            "classifier_state_dict": self.model.classifier.state_dict(),
+        sidecar_path = artifact_sidecar_path(out)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        # save_file refuses tensors that share storage and requires contiguous ones, so each tensor is
+        # cloned into its own contiguous CPU storage; load_state_dict(strict=True) restores it exactly.
+        state = {
+            name: value.detach().to("cpu").contiguous().clone()
+            for name, value in self.model.classifier.state_dict().items()
+            if isinstance(value, torch.Tensor)
         }
-        torch.save(payload, out)
+        # Write sibling temporary files and rename them, so an interrupted save never leaves a half-written
+        # artifact in place of the previous one. The weights land first, then the sidecar that names their
+        # digest.
+        partial = out.with_name(f"{out.name}.partial")
+        header = {"format": ARTIFACT_FORMAT, "format_version": ARTIFACT_FORMAT_VERSION}
+        save_file(state, str(partial), metadata=header)
+        weights_sha256 = _sha256_file(partial)
+        sidecar = _plain_json(
+            {
+                "format": ARTIFACT_FORMAT,
+                "format_version": ARTIFACT_FORMAT_VERSION,
+                "artifact_kind": "classifier-head-adapter",
+                "weights_file": out.name,
+                "weights_format": "safetensors",
+                "weights_sha256": weights_sha256,
+                "tensors": len(state),
+                "base_model_id": MODEL_ID,
+                "base_model_revision": MODEL_REVISION,
+                "class_names": [str(name) for name in self.labels],
+                "num_classes": len(self.labels),
+                "activation": self.activation,
+                "adaptation": dict(self.adaptation_config),
+            }
+        )
+        sidecar_partial = sidecar_path.with_name(f"{sidecar_path.name}.partial")
+        sidecar_partial.write_text(json.dumps(sidecar, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        os.replace(partial, out)
+        os.replace(sidecar_partial, sidecar_path)
         return out
 
     def load_artifact(self, artifact_path: str | Path) -> None:
-        """Load an adapted artifact into the existing pipeline safely using weights_only=True."""
-        import torch
+        """Load an exported adapter into the existing pipeline; every check runs before a tensor is read.
 
+        ``artifact_path`` is the ``.safetensors`` weights file; its metadata is the ``.json`` sidecar beside
+        it, read as plain JSON. The format, lineage, vocabulary and activation are checked, then the weights
+        file is checked against the sidecar's SHA-256 before it is opened, so a substituted or corrupted
+        file is refused without being parsed. The weights are read with ``safetensors.torch.load_file``
+        (tensors only, no pickle) and applied with ``load_state_dict(strict=True)``. Version-1.0 ``.pt``
+        pickle artifacts are refused.
+        """
         if self.model is None or self.extractor is None:
             raise RuntimeError("cannot load artifact into a pipeline without an underlying torch model")
 
-        payload = torch.load(artifact_path, map_location=self.device, weights_only=True)
+        weights_path = Path(artifact_path)
+        if weights_path.suffix != ARTIFACT_WEIGHTS_SUFFIX:
+            raise ValueError(
+                f"artifact {weights_path.name!r} is not a {ARTIFACT_WEIGHTS_SUFFIX} file; the adapter is a "
+                "safetensors state dict plus a JSON sidecar, and pickle (.pt) artifacts are not read"
+            )
+        sidecar_path = artifact_sidecar_path(weights_path)
+        if not sidecar_path.is_file():
+            raise ValueError(
+                f"artifact sidecar {sidecar_path.name!r} is missing beside {weights_path.name!r}"
+            )
+        payload = json.loads(sidecar_path.read_text(encoding="utf-8"))
         if not isinstance(payload, dict):
-            raise ValueError(f"expected artifact dict, got {type(payload).__name__}")
+            raise ValueError(f"artifact sidecar {sidecar_path.name!r} is not a JSON object")
         if payload.get("format") != ARTIFACT_FORMAT:
             raise ValueError(f"unrecognized artifact format: {payload.get('format')}")
         if payload.get("format_version") != ARTIFACT_FORMAT_VERSION:
@@ -599,12 +688,27 @@ class ASTAudioClassificationPipeline:
             raise ValueError("artifact class_names must contain non-empty strings")
         if len(class_names) < 2 or len(set(class_names)) != len(class_names):
             raise ValueError("artifact class_names must contain at least 2 unique names")
-        classifier_state = payload.get("classifier_state_dict")
-        if not isinstance(classifier_state, dict):
-            raise ValueError("artifact classifier_state_dict must be a dict")
         adaptation = payload.get("adaptation", {})
         if not isinstance(adaptation, dict):
             raise ValueError("artifact adaptation metadata must be a dict")
+
+        # The digest is checked before the weights file is opened, so a substituted or corrupted file is
+        # refused without being parsed at all.
+        expected = payload.get("weights_sha256")
+        if not isinstance(expected, str) or len(expected) != 64:
+            raise ValueError(f"artifact sidecar {sidecar_path.name!r} records no weights_sha256")
+        if not weights_path.is_file():
+            raise ValueError(f"artifact weights file {weights_path.name!r} is missing")
+        actual = _sha256_file(weights_path)
+        if actual != expected:
+            raise ValueError(
+                f"artifact weights digest mismatch for {weights_path.name!r}: sidecar records {expected}, "
+                f"file has {actual}"
+            )
+
+        from safetensors.torch import load_file
+
+        classifier_state = load_file(str(weights_path), device="cpu")
 
         # Build and validate off to the side so a rejected artifact cannot leave
         # the live pipeline with a partially replaced classifier.
