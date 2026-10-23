@@ -90,7 +90,7 @@ No result here is suitable for autonomous decisions about a person's health, saf
 2. Input and dataset validators reject malformed shape, dtype, amplitude, finiteness, rate, duration, duplicate ID, label, class-name, or class-coverage conditions before adaptation.
 3. The split is seeded, stratified, disjoint, and guarantees at least one record from every class on each side.
 4. Adaptation refuses to begin while the backbone remains trainable. The exported artifact contains only classifier parameters and records the class order, activation, training settings, and exact base lineage.
-5. Artifact reload uses `torch.load(..., weights_only=True)`, validates its schema and identity, reconstructs the head, and can be checked numerically against pre-export predictions.
+5. Artifact reload reads the `safetensors` file with `safetensors` only (no pickle), validates its schema and identity, reconstructs the head, and can be checked numerically against pre-export predictions.
 6. The notebook labels synthetic metrics as sample sanity, reports the majority baseline, keeps uploads disabled by default, bounds ZIP resources, rejects unsafe member paths, and never extracts the archive.
 
 ###### Risks and harms
@@ -109,7 +109,7 @@ Prohibited uses include covert surveillance, speaker or demographic profiling, f
 - `model.safetensors` SHA-256: `ae0c1e2ad4e1381d851fa9bf298ba13ebc9c5a914cdee2dbe427a6583869924d`
 - `config.json` SHA-256: `a93d525511d77e8ecc933d09674b85099815bbbb417c228a4edd655e252fb9ff`
 - `preprocessor_config.json` SHA-256: `8d04ba5a9c6fca5d39d0de2b1fd05ecf79deb589fbba279728bbebac39934231`
-- Adapter format: `org.valcorza.ast-audio.adapter.v1`, format version `1.0`; classifier state only, not a standalone model
+- Adapter format: `org.valcorza.ast-audio.adapter.v2`, format version `2.0` (`safetensors`; metadata as plain JSON in the header); classifier state only, not a standalone model
 
 ## Input/output contract
 

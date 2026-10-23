@@ -42,7 +42,7 @@ Source inspection confirmed:
 - `pipeline.py` supports arbitrary named reheading, freezing the backbone, cached pooled features, classifier-only AdamW training, classification metrics and artifact reload.
 - Current `finetune` keeps the last epoch, lacks epoch-zero competition and does not expose checkpoint-selection callbacks. **The workshop must add a tested local trainer with explicit per-epoch snapshots and validation selection.** Do not claim the current method already implements that behavior or repeatedly call it for one epoch while silently resetting optimizer state.
 - Current samples are synthetic geophony/biophony/anthrophony clips. This unit uses the ten actual event categories below. It does not relabel recordings into those three acoustic-ecology categories or claim ecological monitoring capability.
-- The existing adapter is a classifier-only `.pt` payload, loaded with `torch.load(..., weights_only=True)`, validated against base identity, label order and tensor schema. Preserve that compatibility and add a SHA-256 manifest; do not describe it as a safetensors artifact.
+- The adapter is a classifier-only `safetensors` file (adapter format 2.0, ARTIFACT_SPEC SER7/SER10/SER11; it replaced the unreleased `torch.save` `.pt` format 1.0), read with `safetensors` only and validated against base identity, label order and tensor schema. Add a SHA-256 manifest.
 - Source preprocessing supports resampling through torchaudio; the adaptation dataset expects mono float32 at 16 kHz. Source and notebook Python files were AST-parsed during specification work; no model was executed.
 
 New build work includes real-data acquisition/pinning, source-group validation, the selected-checkpoint trainer, full-score exports, the noise activity, stricter artifact/refusal tests and notebook guidance. Carry the changes as documented notebook-local reference code; do not silently change the existing synthetic tutorial or production API.
@@ -137,9 +137,9 @@ Use compact tables and short summaries in the learner flow. Keep hashes, detaile
 
 ## 10. Artifact and evidence contract
 
-Export only the selected classifier parameters and compatible adaptation metadata in the existing `.pt` format. Include a separate JSON manifest with artifact SHA-256, base snapshot identity, extractor identity, ordered class names, softmax activation, training recipe and selection result. Retain the base weight manifest; never bundle base weights.
+Export only the selected classifier parameters and compatible adaptation metadata in the repository's `safetensors` adapter format (2.0). Include a separate JSON manifest with artifact SHA-256, base snapshot identity, extractor identity, ordered class names, softmax activation, training recipe and selection result. Retain the base weight manifest; never bundle base weights.
 
-In a new process, verify digest and lineage, use `weights_only=True`, validate exact expected tensor names/shapes and finiteness, then reconstruct the selected head. Refuse wrong vocabulary order, base revision, activation, tensor schema, nonfinite values or corrupted bytes before applying weights. Do not fall back to unrestricted pickle loading. Round-trip compatibility with the existing repository loader must be tested; any stricter wrapper checks must be documented.
+In a new process, verify digest and lineage, read the file with `safetensors` only, validate exact expected tensor names/shapes and finiteness, then reconstruct the selected head. Refuse wrong vocabulary order, base revision, activation, tensor schema, nonfinite values or corrupted bytes before applying weights. Never read pickle data. Round-trip compatibility with the existing repository loader must be tested; any stricter wrapper checks must be documented.
 
 Run fresh waveform→features→head inference on fixed validation probes and all test clips. Require logits `allclose(atol=1e-5, rtol=1e-4)`, probabilities `atol=1e-6, rtol=1e-4`, identical top-one predictions and identical confusion counts; recomputed accuracy/macro-F1 tolerance `1e-12`. Preserve maximum deviations. Fixed tolerances cannot be relaxed to conceal a failed run.
 

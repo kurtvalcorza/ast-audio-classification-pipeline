@@ -78,7 +78,7 @@ TEMPLATE = {
         "2026-09-16 local pre-flight measured 1.3 s for the five epochs in a warm CPU process (Windows, Python 3.12). On a "
         "fresh hosted runtime, building the isolated environment and downloading the model take longer — a few minutes is an "
         "estimate that depends on the network. Evaluation against a training-majority baseline and a portable adapter export "
-        "(`ast-audio-adapter-v1.pt`) complete the end-to-end workflow."
+        "(`ast-audio-adapter-v2.safetensors`) complete the end-to-end workflow."
     ),
     "learning_objectives": (
         "after this notebook you should be able to (1) explain how AST turns a waveform into a spectrogram and why the "
@@ -434,7 +434,7 @@ TEMPLATE = {
                 "head with `torch.optim.AdamW` and cross-entropy for `EPOCHS = 5` epochs at `BATCH_SIZE = 4` and `LEARNING_RATE "
                 "= 1e-3` (5 optimizer steps per epoch, 25 in total). After each epoch it prints the training loss and the "
                 "accuracy on the evaluation clips, for information only: nothing is chosen from those numbers. It then records "
-                "the trained model's scores for later comparison and saves the head as `outputs/ast-audio-adapter-v1.pt`: the "
+                "the trained model's scores for later comparison and saves the head as `outputs/ast-audio-adapter-v2.safetensors`: the "
                 "trained weights, the class names, the training settings and the exact base-model identity. The 85 M-parameter "
                 "backbone is not duplicated in this file; it is rebuilt from the pinned base revision when the adapter is loaded.\n\n"
                 "**Predict before running:** will the training loss fall every epoch? How many epochs will the head need to "
@@ -465,7 +465,7 @@ TEMPLATE = {
             "md": (
                 "## 10. Held-out evaluation in a fresh process · [Evaluation practice]\n\n"
                 "The `evaluate` stage starts a new process, rebuilds the base model from the verified snapshot, loads the adapter "
-                "with `torch.load(..., weights_only=True)`, and scores the six evaluation clips. For each clip the adapted head "
+                "with `safetensors` (no pickle is read), and scores the six evaluation clips. For each clip the adapted head "
                 "produces three **softmax scores**: positive numbers that sum to one. The **decision rule is argmax** — the class "
                 "with the highest score is the prediction; there is no threshold and no \"unsure\" answer. These scores are "
                 "**uncalibrated**: six clips cannot show how often a score of 0.9 is right, so do not read them as "
@@ -557,7 +557,7 @@ TEMPLATE = {
                 "parity — with the notebook's source revision, the model id, revision and licence, the runtime versions, and the "
                 "SHA-256 of every output file.\n\n"
                 "**Expected result:** a list of the run's output files, including `{stem}_input_manifest.json`, "
-                "`{stem}_evaluation_report.json`, `{stem}_result.json`, `{stem}_top_k.csv` and `ast-audio-adapter-v1.pt`."
+                "`{stem}_evaluation_report.json`, `{stem}_result.json`, `{stem}_top_k.csv` and `ast-audio-adapter-v2.safetensors`."
             ),
             "code": "run_stage('bundle')",
         },

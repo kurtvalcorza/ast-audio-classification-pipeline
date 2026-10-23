@@ -145,7 +145,7 @@ EXPECTED_OUTPUTS = (
     "_evaluation_report.json",
     "_result.json",
     "_top_k.csv",
-    'ADAPTER = "ast-audio-adapter-v1.pt"',
+    'ADAPTER = "ast-audio-adapter-v2.safetensors"',
     "_reload_parity.json",
 )
 # Profile-specific learner-facing statements (AST-m1, AST-m2, AST-m5 among them).

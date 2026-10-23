@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import struct
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -27,8 +28,71 @@ MIN_AUDIO_SECONDS = 0.025  # one 25 ms fbank frame
 NUM_LABELS = 527  # AudioSet ontology classes in the pinned config.json
 DEFAULT_TOP_K = 5
 ACTIVATION = "sigmoid"
-ARTIFACT_FORMAT = "org.valcorza.ast-audio.adapter.v1"
-ARTIFACT_FORMAT_VERSION = "1.0"
+ARTIFACT_FORMAT = "org.valcorza.ast-audio.adapter.v2"
+ARTIFACT_FORMAT_VERSION = "2.0"
+# Format 2.0 is a safetensors file (ARTIFACT_SPEC SER7/SER10/SER11): its tensors are exactly the classifier
+# state dict, and every other field is plain data held as sorted-key compact JSON under this single header
+# metadata key, so two saves of the same head give identical bytes. Format 1.0 (a `torch.save` pickle) was
+# never published as a release and is no longer read.
+ARTIFACT_METADATA_KEY = "dimer_artifact"
+ARTIFACT_SUFFIX = ".safetensors"
+
+
+def _reject_constant(name: str) -> Any:
+    raise ValueError(f"non-finite constant {name}")
+
+
+def _artifact_metadata_json(metadata: Mapping[str, Any]) -> str:
+    """Sorted-key compact JSON; refuses values that are not plain JSON data (SER11)."""
+    return json.dumps(metadata, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
+
+
+def write_artifact(path: str | Path, metadata: Mapping[str, Any], state_dict: Mapping[str, Any]) -> Path:
+    """Write a format-2.0 artifact: `state_dict` as safetensors tensors, `metadata` as a JSON header field."""
+    import torch
+    from safetensors.torch import save
+
+    tensors = {}
+    for name, tensor in state_dict.items():
+        if not isinstance(tensor, torch.Tensor):
+            raise TypeError(f"state_dict[{name!r}] is {type(tensor).__name__}, not a tensor")
+        tensors[name] = tensor.detach().to("cpu").contiguous().clone()
+    data = save(tensors, metadata={ARTIFACT_METADATA_KEY: _artifact_metadata_json(metadata)})
+    out = Path(path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_bytes(data)
+    return out
+
+
+def read_artifact(path: str | Path) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Read a format-2.0 artifact with safetensors only (no pickle); return (metadata, CPU state dict)."""
+    import torch
+    from safetensors.torch import load
+
+    data = Path(path).read_bytes()
+    if len(data) < 8:
+        raise ValueError(f"artifact is not a safetensors file (only {len(data)} bytes)")
+    (header_len,) = struct.unpack("<Q", data[:8])
+    if header_len > len(data) - 8 or data[8 : 9] != b"{":
+        raise ValueError("artifact is not a safetensors file (bad or truncated header)")
+    try:
+        header = json.loads(data[8 : 8 + header_len])
+        state = load(data)
+    except Exception as exc:  # safetensors raises its own error type for malformed or truncated files
+        raise ValueError(f"artifact is not a valid safetensors file: {exc}") from exc
+    extra = header.get("__metadata__") or {}
+    if not isinstance(extra, dict) or set(extra) != {ARTIFACT_METADATA_KEY}:
+        raise ValueError(f"artifact header metadata must hold exactly {ARTIFACT_METADATA_KEY!r}")
+    try:
+        metadata = json.loads(extra[ARTIFACT_METADATA_KEY], parse_constant=_reject_constant)
+    except ValueError as exc:
+        raise ValueError(f"artifact metadata is not plain JSON: {exc}") from exc
+    if not isinstance(metadata, dict):
+        raise ValueError(f"expected artifact metadata object, got {type(metadata).__name__}")
+    for name, tensor in state.items():
+        if not torch.isfinite(tensor).all():
+            raise ValueError(f"artifact tensor {name!r} has non-finite values")
+    return metadata, dict(state)
 
 
 def verify_snapshot(path: str | Path | None = None) -> dict[str, Any]:
@@ -540,19 +604,22 @@ class ASTAudioClassificationPipeline:
         return evaluate_classification(predictions, targets, self.labels)
 
     def save_artifact(self, output_path: str | Path) -> Path:
-        """Export adapted weights, vocabulary, base model lineage, and artifact metadata."""
-        import torch
+        """Export the adapted classifier head as a safetensors artifact (format 2.0).
 
+        The file holds only the classifier state dict as tensors; vocabulary, base model lineage and
+        adaptation metadata are plain JSON in one header field. Base weights are never included.
+        """
         if self.model is None:
             raise RuntimeError("cannot save artifact without an underlying torch model")
 
         out = Path(output_path)
-        out.parent.mkdir(parents=True, exist_ok=True)
+        if out.suffix != ARTIFACT_SUFFIX:
+            raise ValueError(f"artifact path must end in {ARTIFACT_SUFFIX}: {out.name}")
 
         if self.activation != "softmax" or len(self.labels) == NUM_LABELS:
             raise RuntimeError("artifact export requires an adapted single-label classifier")
 
-        payload = {
+        metadata = {
             "format": ARTIFACT_FORMAT,
             "format_version": ARTIFACT_FORMAT_VERSION,
             "artifact_kind": "classifier-head-adapter",
@@ -562,21 +629,15 @@ class ASTAudioClassificationPipeline:
             "num_classes": len(self.labels),
             "activation": self.activation,
             "adaptation": dict(self.adaptation_config),
-            "classifier_state_dict": self.model.classifier.state_dict(),
         }
-        torch.save(payload, out)
-        return out
+        return write_artifact(out, metadata, self.model.classifier.state_dict())
 
     def load_artifact(self, artifact_path: str | Path) -> None:
-        """Load an adapted artifact into the existing pipeline safely using weights_only=True."""
-        import torch
-
+        """Load a safetensors adapter artifact into the existing pipeline; no pickle is ever read."""
         if self.model is None or self.extractor is None:
             raise RuntimeError("cannot load artifact into a pipeline without an underlying torch model")
 
-        payload = torch.load(artifact_path, map_location=self.device, weights_only=True)
-        if not isinstance(payload, dict):
-            raise ValueError(f"expected artifact dict, got {type(payload).__name__}")
+        payload, classifier_state = read_artifact(artifact_path)
         if payload.get("format") != ARTIFACT_FORMAT:
             raise ValueError(f"unrecognized artifact format: {payload.get('format')}")
         if payload.get("format_version") != ARTIFACT_FORMAT_VERSION:
@@ -599,9 +660,6 @@ class ASTAudioClassificationPipeline:
             raise ValueError("artifact class_names must contain non-empty strings")
         if len(class_names) < 2 or len(set(class_names)) != len(class_names):
             raise ValueError("artifact class_names must contain at least 2 unique names")
-        classifier_state = payload.get("classifier_state_dict")
-        if not isinstance(classifier_state, dict):
-            raise ValueError("artifact classifier_state_dict must be a dict")
         adaptation = payload.get("adaptation", {})
         if not isinstance(adaptation, dict):
             raise ValueError("artifact adaptation metadata must be a dict")
