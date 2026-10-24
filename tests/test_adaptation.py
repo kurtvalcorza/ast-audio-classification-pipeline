@@ -10,6 +10,7 @@ from transformers import ASTConfig, ASTForAudioClassification
 from ast_audio_classification_pipeline import (
     ADAPT_CLASSES,
     ARTIFACT_FORMAT,
+    ARTIFACT_FORMAT_VERSION,
     DATASET_REPRESENTATION,
     MODEL_ID,
     MODEL_REVISION,
@@ -27,6 +28,7 @@ from ast_audio_classification_pipeline import (
     tutorial_tone,
     validate_dataset,
 )
+from ast_audio_classification_pipeline.pipeline import read_artifact, write_artifact
 
 
 def _record(index: int, label: int, waveform: np.ndarray | None = None) -> dict:
@@ -257,14 +259,15 @@ def test_artifact_save_and_safe_reload(tmp_path):
         activation="softmax",
     )
 
-    artifact_file = tmp_path / "ast-audio-adapter-v1.pt"
+    artifact_file = tmp_path / "ast-audio-adapter-v2.safetensors"
     saved = pipe.save_artifact(artifact_file)
     assert saved.is_file()
     assert saved.stat().st_size < 1_000_000
-    payload = torch.load(saved, weights_only=True)
+    payload, state = read_artifact(saved)
     assert payload["format"] == ARTIFACT_FORMAT
-    assert "classifier_state_dict" in payload
-    assert "state_dict" not in payload
+    assert payload["format_version"] == ARTIFACT_FORMAT_VERSION
+    assert set(state) == set(model.classifier.state_dict())
+    assert "classifier_state_dict" not in payload
 
     # Create fresh model with random weights
     fresh_model = ASTForAudioClassification(ASTConfig(num_labels=527))
@@ -338,8 +341,8 @@ def test_finetune_runs_bounded_gradient_adaptation():
 
 
 def test_artifact_safe_reload_rejects_corrupted_payload(tmp_path):
-    bad_artifact = tmp_path / "bad.pt"
-    torch.save({"format": "unknown.format"}, bad_artifact)
+    bad_artifact = tmp_path / "bad.safetensors"
+    write_artifact(bad_artifact, {"format": "unknown.format"}, {})
 
     config = ASTConfig(num_labels=527)
     model = ASTForAudioClassification(config)
@@ -354,13 +357,10 @@ def test_artifact_safe_reload_rejects_corrupted_payload(tmp_path):
     with pytest.raises(ValueError, match="unrecognized artifact format"):
         pipe.load_artifact(bad_artifact)
 
-    torch.save(
-        {
-            "format": ARTIFACT_FORMAT,
-            "format_version": "1.0",
-            "artifact_kind": "full-model",
-        },
+    write_artifact(
         bad_artifact,
+        {"format": ARTIFACT_FORMAT, "format_version": ARTIFACT_FORMAT_VERSION, "artifact_kind": "full-model"},
+        {},
     )
     with pytest.raises(ValueError, match="artifact_kind"):
         pipe.load_artifact(bad_artifact)
@@ -377,11 +377,12 @@ def test_artifact_rejection_does_not_mutate_live_classifier(tmp_path):
         model=model,
         extractor=object(),
     )
-    bad_artifact = tmp_path / "bad-state.pt"
-    torch.save(
+    bad_artifact = tmp_path / "bad-state.safetensors"
+    write_artifact(
+        bad_artifact,
         {
             "format": ARTIFACT_FORMAT,
-            "format_version": "1.0",
+            "format_version": ARTIFACT_FORMAT_VERSION,
             "artifact_kind": "classifier-head-adapter",
             "base_model_id": MODEL_ID,
             "base_model_revision": MODEL_REVISION,
@@ -389,9 +390,8 @@ def test_artifact_rejection_does_not_mutate_live_classifier(tmp_path):
             "num_classes": len(ADAPT_CLASSES),
             "activation": "softmax",
             "adaptation": {},
-            "classifier_state_dict": {},
         },
-        bad_artifact,
+        {},
     )
 
     with pytest.raises(RuntimeError, match="Missing key"):

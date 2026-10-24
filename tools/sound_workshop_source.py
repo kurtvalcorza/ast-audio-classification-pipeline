@@ -782,7 +782,7 @@ def train(root):
             )
     write_json(root / "outputs/metrics.json", reports)
     pipe.adaptation_config.update({"recipe": RECIPE, "selection": selection})
-    path = pipe.save_artifact(root / "outputs/selected_head.pt")
+    path = pipe.save_artifact(root / "outputs/selected_head.safetensors")
     from ast_reference.pipeline import MODEL_ID, MODEL_REVISION
 
     write_json(
@@ -823,11 +823,11 @@ def verify_parity(live, reloaded):
 
 def strict_load(root, pipe):
     import torch
-    from ast_reference.pipeline import MODEL_ID, MODEL_REVISION
+    from ast_reference.pipeline import MODEL_ID, MODEL_REVISION, read_artifact
 
     manifest = read_json(root / "outputs/adapter_manifest.json")
     names = read_json(root / "outputs/configuration.json")["class_names"]
-    path = root / "outputs/selected_head.pt"
+    path = root / "outputs/selected_head.safetensors"
     if (
         digest(path) != manifest["sha256"]
         or manifest["class_names"] != names
@@ -840,12 +840,12 @@ def strict_load(root, pipe):
         "extractor_sha256"
     ] or pipe.extractor.to_dict() != read_json(root / "outputs/extractor.json"):
         raise ValueError("extractor identity changed")
-    payload = torch.load(path, map_location="cpu", weights_only=True)
+    # safetensors only: tensors plus one plain-JSON header field; no pickle is read.
+    payload, state = read_artifact(path)
     if payload["class_names"] != names or payload["activation"] != "softmax":
         raise ValueError("payload vocabulary or activation mismatch")
     pipe.rehead(names, seed=SEED)
     expected = pipe.model.classifier.state_dict()
-    state = payload["classifier_state_dict"]
     if set(state) != set(expected):
         raise ValueError("adapter tensor names mismatch")
     for key, tensor in state.items():
@@ -1102,7 +1102,7 @@ def report(root):
         "scores.json",
         "scores.csv",
         "metrics.json",
-        "selected_head.pt",
+        "selected_head.safetensors",
         "adapter_manifest.json",
         "reload_scores.json",
         "reload_parity.json",
@@ -1195,7 +1195,7 @@ STAGE_FILES = {
         "selection.json",
         "scores.json",
         "metrics.json",
-        "selected_head.pt",
+        "selected_head.safetensors",
         "adapter_manifest.json",
         "extractor.json",
     ],
