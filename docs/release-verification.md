@@ -39,6 +39,12 @@ Before promotion:
 
 ## Recorded executions
 
+### Safetensors adapter revision (2026-10-24): hosted run pending
+
+Code commit `a52d33b087a9c1d2fee37d44b640f8651c2900be` changed the exported adapter from `ast-audio-adapter-v1.pt` (a `torch.save` pickle, format version `1.0`) to `ast-audio-adapter-v1.safetensors` (classifier state dict only) plus the sidecar `ast-audio-adapter-v1.json` (format version `2.0`); reload checks the weights SHA-256 in the sidecar before reading any tensor. The notebook was regenerated from `tools/build_notebook.py`: blob `2f694197e54a2c548108d7be11ee1a32c3914942` -> `40df2c99e5d65764f55157745deee7ca448fff8d`. Under REL14 every hosted run below executed an earlier blob and is history for that blob; **a hosted run of the new blob is pending**, on the default path and with `RUN_ACTIVITY = True` (the activity stage reloads the adapter). Offline evidence for this revision: ruff clean, unit tests, `validate_release_assets.py` PASS and `build_notebook.py --check` OK, CPU only.
+
+The two `ast-audio-adapter-v1.pt` files under `verification/2026-09-16-kaggle-t4/suite/dimer-nb2-ast-audio-classification/{v2,v3}/evidence/outputs/` are retained unchanged as historical execution evidence of blobs `3a99508` (v2) and `0be7254` (v3); they are not a published artifact and the current loader does not read them.
+
 ### Isolated-environment revision (2026-10-03)
 
 #### Hosted Colab T4 run (2026-10-03)
@@ -114,6 +120,10 @@ The historical run used PyTorch `2.14.0+cu130`, verified every snapshot digest, 
 On 2026-10-02 the notebook was reviewed under Notebook Review Framework v1 ([review](reviews/2026-10-02-notebook-review/DIMER_Sound_Event_Classification_Workshop_Review.md); findings SEC-M1–M3, SEC-m1–m6) and the fixes changed the notebook blob and the carried `workshop.py`. The 2026-09-27 hosted run above covers blob `384d9736a4f5` only; the fixed revision has CPU source and helper tests but no hosted run yet. Before promotion it needs a fresh Colab T4 `Run all` that also exercises a representative labelled BYOD directory, at least one rejected BYOD input, and the unlabelled branch.
 
 Validation saturates at macro-F1 1.0 after one epoch, so epoch selection is uninformative on this sample; the test comparison is the evidence of adaptation. A fresh Colab T4 `Run all` of blob `384d9736a4f5` passed on 2026-09-27 (first row above). The notebook stays **Candidate** until the ESC-10 per-clip attribution review it names (233 CC0, 165 CC BY, 2 CC Sampling+) and a representative labelled BYOD run are recorded here.
+
+### Safetensors adapter revision (2026-10-24): hosted run pending
+
+Code commit `a52d33b087a9c1d2fee37d44b640f8651c2900be` changed the workshop's selected-head export from `selected_head.pt` to `selected_head.safetensors` plus the sidecar `selected_head.json`; `adapter_manifest.json` records both digests and `strict_load` checks them before reading the tensors with `safetensors.torch.load_file`. The notebook was regenerated from `tools/build_sound_workshop.py` (logged as the fifth `post_generation_revisions` entry): blob `ba65ef45d033dae860a4d592222e1af4db21cc19` -> `fa3dac7892e4d1a1f1e2658840ea6fa1b5028621` (cells `code-03` carrier and `md-11` Section 6 prose). Under REL14 the hosted runs above executed earlier blobs and are history for those blobs; **a hosted default-path run of the new blob is pending**.
 
 ### Notebook source layout change (2026-10-03)
 
