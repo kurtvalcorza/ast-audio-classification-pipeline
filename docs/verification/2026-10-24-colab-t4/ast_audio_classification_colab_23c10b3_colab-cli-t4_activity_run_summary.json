@@ -1,0 +1,52 @@
+{
+  "repo": "ast-audio-classification-pipeline",
+  "sha": "23c10b3e9cc3e477421854448c5c6f7eb22a08c0",
+  "notebook": "tutorials/ast_audio_classification_colab.ipynb",
+  "blob": "25c97147bfb0cbe6519dabcdbc660a0f52c0dab5",
+  "gpu": "T4",
+  "session": "suite-ast-23c10b3-39a0",
+  "started_utc": "2026-10-24T10:09:43+00:00",
+  "runner": "Colab CLI `colab exec -f` on a fresh session (not a browser Run all)",
+  "overrides": [
+    {
+      "name": "RUN_ACTIVITY",
+      "from": "False",
+      "to": "True"
+    }
+  ],
+  "run_copy_blob": "db1b693d4c239b7a467d3e0df3158fd739736e7c",
+  "run_copy_sha256": "df4169b161b8a1222df389be1fe80cb88c652a400177a021bc4360d043594efe",
+  "run_copy_note": "the executed copy differs from the committed blob only in the listed assignment literals; input_unchanged compares against that copy",
+  "status": "[suite-ast-23c10b3-39a0] gpu-t4-s-kkb-usw4b1-2nv2ej871t349 | Hardware: T4 | Shape: Standard | Variant: GPU | Status: IDLE",
+  "exec_exit_code": 0,
+  "stopped": true,
+  "wall_s": 142.7,
+  "input_unchanged": true,
+  "executed_file": "ast_audio_classification_colab_23c10b3_colab-cli-t4_output.ipynb",
+  "log_cells": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15
+  ],
+  "log_total": 15,
+  "code_cells": 15,
+  "executed_cells": 15,
+  "errors": [],
+  "execution_counts": [],
+  "sequential": null,
+  "executed_sha256": "73b64b45af6d2b982912aa076673a6b5d46f297877ab103d3e00cf6ea6f87340",
+  "log_sequential_complete": true,
+  "verdict": "PASS"
+}
