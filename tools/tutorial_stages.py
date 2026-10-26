@@ -10,7 +10,9 @@ restart is needed. Each stage is a separate process and starts from files only: 
 ``--weights``, the dataset written by ``dataset``, the adapter artifact written by ``finetune`` and the JSON records of
 earlier stages. Learner-facing exports go to ``RUN_DIR/outputs``; hand-off state goes to ``RUN_DIR/state``. On failure
 a stage writes ``RUN_DIR/state/<stage>.error.json`` with the exception type and message, which the notebook re-raises
-in the kernel.
+in the kernel. A BYOD input the stage refuses is not a failure (NOTEBOOK_SPEC 3.0 DAT19/DAT20): the stage raises
+``Refused``, prints no traceback, removes the earlier run's results, records ``"refused": true`` with the file name and
+the rule, and exits with ``REFUSED_EXIT``; the notebook then shows one ``Refused: <file>: <reason>`` line.
 
 Stages: weights → runtime → pretrained → dataset → baseline → finetune → evaluate → reload → bundle, plus the optional
 ``activity``. The package API does the work; this runner only sequences it and adds the tutorial's own data hygiene
@@ -26,6 +28,7 @@ import io
 import json
 import platform
 import re
+import shutil
 import sys
 import time
 import traceback
@@ -49,6 +52,28 @@ PARITY_ATOL = 1e-6
 ZIP_MAX_BYTES = 64 * 1024**2
 ZIP_MAX_EXPANDED = 256 * 1024**2
 ZIP_MAX_FILES = 100
+REFUSED_EXIT = 3  # a user input refused with a learner-facing message (DAT20); a crash exits 2
+
+
+class Refused(ValueError):
+    """A user-supplied input that breaks the input contract (DAT19). Not a crash: no traceback is printed for it."""
+
+    def __init__(self, file: str, reason: str) -> None:
+        self.file = str(file) or "your input"
+        self.reason = str(reason).strip()
+        super().__init__(f"{self.file}: {self.reason}")
+
+
+def refused(exc: BaseException, file: str, fix: str) -> Refused:
+    """``exc`` (whose message may start with ``<file>: ``) as one ``Refused`` naming ``file``, with how to recover."""
+    message = str(exc).strip() or type(exc).__name__
+    if message.startswith(f"{file}: "):
+        message = message[len(file) + 2:]
+    if not message.endswith((".", ")")):
+        message += "."
+    return Refused(file, f"{message} {fix}")
+
+
 SCORE_SEMANTICS = "uncalibrated softmax scores over the target classes; the predicted label is the argmax"
 DECISION_RULE = "argmax: the class with the highest score is the prediction; no threshold is applied and no abstention is possible"
 
@@ -401,13 +426,19 @@ def stage_pretrained(run: Run) -> None:
 
     if run.options.wav:
         path = Path(run.options.wav)
-        audio, sample_rate = decode_pcm_wav(path.read_bytes(), path.name)
+        if not path.is_file():
+            raise Refused(str(path), "is not a file in this runtime: correct BYOD_WAV_PATH, or leave it empty to upload in Colab, then run the Section 5 cell again.")
+        try:  # everything here reads the learner's file: a ValueError is the file, not a bug (DAT19)
+            audio, sample_rate = decode_pcm_wav(path.read_bytes(), path.name)
+            manifest = validate_inputs(audio, sample_rate, top_k=TOP_K_BASE, names=[path.name])
+        except (ValueError, TypeError, OSError) as exc:
+            raise refused(exc, path.name, "Export it as a 16-bit PCM WAV of at most 120 s and run the Section 5 cell again.") from None
         clip_name, sample_kind = path.name, "BYOD"
     else:
         sample_rate = SAMPLE_RATE
         audio = tutorial_tone(duration=3.0, sample_rate=sample_rate, frequency=TONE_HZ, amplitude=TONE_AMPLITUDE)
         clip_name, sample_kind = f"synthetic_sine_{int(TONE_HZ)}hz_3s.wav", "synthetic"
-    manifest = validate_inputs(audio, sample_rate, top_k=TOP_K_BASE, names=[clip_name])
+        manifest = validate_inputs(audio, sample_rate, top_k=TOP_K_BASE, names=[clip_name])
     run.write_state("input_manifest.json", manifest)
     pipe = load_pipeline(run)
     result = pipe.predict(audio, sample_rate=sample_rate, top_k=TOP_K_BASE)
@@ -433,16 +464,26 @@ def stage_dataset(run: Run) -> None:
 
     source: dict[str, Any] = {}
     if run.options.zip:
-        records, source = load_zip_dataset(Path(run.options.zip), ADAPT_CLASSES)
-        kind = "BYOD"
-    else:
-        records, kind = default_dataset(), "synthetic"
-        source = {"generator": "synthetic_audio_dataset(n_samples=24, seed=42) + per-record variation (vary_waveform, seed [42, index])"}
-    summary = validate_dataset(records, ADAPT_CLASSES)
-    thin = [name for name, count in summary["class_counts"].items() if count < 2]
-    if thin:
-        raise ValueError(f"every class needs at least two clips for a disjoint split; add clips for {thin}")
-    digests = refuse_duplicates(records)
+        path = Path(run.options.zip)
+        if not path.is_file():
+            raise Refused(str(path), "is not a file in this runtime: correct BYOD_ZIP_PATH, or leave it empty to upload in Colab, then run the Section 6 cell again.")
+    try:
+        if run.options.zip:
+            records, source = load_zip_dataset(path, ADAPT_CLASSES)
+            kind = "BYOD"
+        else:
+            records, kind = default_dataset(), "synthetic"
+            source = {"generator": "synthetic_audio_dataset(n_samples=24, seed=42) + per-record variation (vary_waveform, seed [42, index])"}
+        summary = validate_dataset(records, ADAPT_CLASSES)
+        thin = [name for name, count in summary["class_counts"].items() if count < 2]
+        if thin:
+            raise ValueError(f"every class needs at least two clips for a disjoint split; add clips for {thin}")
+        digests = refuse_duplicates(records)
+    except (ValueError, TypeError, OSError, zipfile.BadZipFile) as exc:
+        if not run.options.zip:  # the generated dataset failing these checks is a bug, not a refusal
+            raise
+        # every check above is about the learner's archive: the ZIP, not a bug (DAT19)
+        raise refused(exc, path.name, "Fix the archive and run the Section 6 cell again.") from None
     train, evaluation = split_dataset(records, val_fraction=VAL_FRACTION, seed=SEED)
     train_digests = {sha256_array(r["waveform"]) for r in train}
     overlap = sorted(r["id"] for r in evaluation if sha256_array(r["waveform"]) in train_digests)
@@ -651,6 +692,26 @@ STAGES = {
 }
 
 
+def invalidate_results(run: Run, stage: str) -> list[str]:
+    """After a refusal, remove the earlier run's results (DAT20), so none of them can be read as this input's result.
+
+    ``weights.json`` and ``runtime.json`` describe the environment, not an input, and stay. A refusal in ``pretrained``
+    also drops its input manifest; one in ``dataset`` keeps it, so only the Section 6 cell needs to run again.
+    """
+    removed = []
+    for path in [*sorted(run.out.glob(f"{STEM}_*")), run.out / ADAPTER]:
+        if path.is_file():
+            path.unlink()
+            removed.append(path.name)
+    if (run.out / "activity").is_dir():
+        shutil.rmtree(run.out / "activity")
+        removed.append("activity/")
+    stale = ["split.json", "dataset.npz", "in_memory_scores.json", "adapter.json"] + (["input_manifest.json"] if stage == "pretrained" else [])
+    for name in stale:
+        (run.state / name).unlink(missing_ok=True)
+    return removed
+
+
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--root", type=Path, required=True, help="run directory holding the carried sources")
@@ -677,6 +738,12 @@ def main(argv: list[str] | None = None) -> int:
     started = time.perf_counter()
     try:
         STAGES[options.stage](run)
+    except Refused as exc:  # the learner's input was refused, not a crash: no traceback, a dedicated exit code (DAT20)
+        removed = invalidate_results(run, options.stage)
+        if removed:
+            print({"removed_earlier_results": removed}, flush=True)
+        error_file.write_text(json.dumps({"stage": options.stage, "type": "Refused", "refused": True, "file": exc.file, "message": str(exc)}), encoding="utf-8")
+        return REFUSED_EXIT
     except Exception as exc:  # the notebook re-raises this message in the kernel
         traceback.print_exc()
         message = str(exc) or repr(exc)
