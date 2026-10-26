@@ -46,7 +46,7 @@ def kernel(tmp_path: Path) -> dict:
     env.pop("PYTHONPATH", None)
     namespace = {"ROOT": run_root, "WEIGHTS": tmp_path / "weights", "PYTHON": Path(sys.executable), "ENV": env, "Path": Path}
     exec("import hashlib\nimport json\nimport subprocess\n" + carrier, namespace)  # noqa: S102 - the notebook's own cell
-    exec(install[install.index("def run_stage(") :], namespace)  # noqa: S102
+    exec(install[install.index("REFUSED_EXIT = 3") :], namespace)  # noqa: S102
     return namespace
 
 
@@ -57,9 +57,9 @@ def test_carrier_writes_and_verifies_every_carried_file(tmp_path: Path) -> None:
     assert ns["NOTEBOOK_SOURCE"]["revision"] == "test-revision"
 
 
-def test_failed_stage_raises_in_the_kernel_with_the_stage_message(tmp_path: Path) -> None:
-    """A labelled ZIP with one class missing is refused by the `dataset` stage (no model needed) and the kernel cell
-    raises with the runner's own message (run as a real subprocess through `run_stage`)."""
+def test_refused_byod_zip_raises_refused_in_the_kernel_not_a_stage_failure(tmp_path: Path) -> None:
+    """A labelled ZIP with one class missing is refused by the `dataset` stage (no model needed): the kernel cell raises
+    `Refused` naming the archive and the rule, not `RuntimeError` (DAT19/DAT20; run as a real subprocess)."""
     ns = kernel(tmp_path)
     archive = tmp_path / "two_classes.zip"
     with zipfile.ZipFile(archive, "w") as handle:
@@ -67,14 +67,24 @@ def test_failed_stage_raises_in_the_kernel_with_the_stage_message(tmp_path: Path
             handle.writestr(name, pcm_wav(seed=i))
     (ns["ROOT"] / "state").mkdir()
     (ns["ROOT"] / "state" / "input_manifest.json").write_text(json.dumps({"findings": []}), encoding="utf-8")
-    try:
+    with pytest.raises(ns["Refused"]) as caught:
         ns["run_stage"]("dataset", "--zip", archive)
+    (line,) = caught.value._render_traceback_()
+    assert line.startswith("Refused: two_classes.zip: ") and "no clips for ['anthrophony']" in line
+
+
+def test_failed_stage_still_raises_in_the_kernel_with_the_stage_message(tmp_path: Path) -> None:
+    """A genuine failure (a stage run out of order) is not a refusal: the kernel cell raises RuntimeError with the
+    runner's own message."""
+    ns = kernel(tmp_path)
+    try:
+        ns["run_stage"]("evaluate")
     except RuntimeError as exc:
         message = str(exc)
     else:  # pragma: no cover - the stage must fail
-        raise AssertionError("the dataset stage accepted a ZIP without anthrophony clips")
-    assert "Stage 'dataset' failed (exit 2)" in message
-    assert "no clips for ['anthrophony']" in message
+        raise AssertionError("the evaluate stage ran without a dataset")
+    assert "Stage 'evaluate' failed (exit 2)" in message
+    assert "split.json is missing" in message
 
 
 def test_kernel_cells_install_nothing_into_the_kernel() -> None:

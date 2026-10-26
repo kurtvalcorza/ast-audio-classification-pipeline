@@ -240,7 +240,7 @@ def test_m5_minor_runtime_stage_refuses_a_version_that_differs_from_the_lock(ast
 def _obtain_upload(tmp_path: Path):
     install = next(c["source"] for c in build.render(ROOT, TEMPLATE, "t")["cells"] if c["source"].startswith("# @title Infrastructure: install the locked"))
     ns = {"ROOT": tmp_path, "Path": Path}
-    exec(install[install.index("def obtain_upload(") :], ns)  # noqa: S102 - the notebook's own helper
+    exec(install[install.index("REFUSED_EXIT = 3") :], ns)  # noqa: S102 - the notebook's own helpers
     return ns["obtain_upload"]
 
 
@@ -249,10 +249,11 @@ def test_m6_minor_path_field_reads_from_disk_without_google_colab(tmp_path: Path
     obtain_upload = _obtain_upload(tmp_path)
     archive = _zip(tmp_path / "mine.zip", _valid_members())
     assert obtain_upload(str(archive), ".zip", "BYOD_ZIP_PATH") == archive.resolve()
-    with pytest.raises(RuntimeError, match="set BYOD_ZIP_PATH to its path"):
+    with pytest.raises(Exception, match="set BYOD_ZIP_PATH to its path") as empty:
         obtain_upload("", ".zip", "BYOD_ZIP_PATH")
-    with pytest.raises(FileNotFoundError, match="BYOD_ZIP_PATH"):
+    with pytest.raises(Exception, match="BYOD_ZIP_PATH") as absent:
         obtain_upload(str(tmp_path / "absent.zip"), ".zip", "BYOD_ZIP_PATH")
+    assert type(empty.value).__name__ == type(absent.value).__name__ == "Refused"  # one clean line, no traceback (DAT20)
 
 
 def test_m6_minor_byod_zip_runs_through_adaptation_evaluation_and_reload(ast_stages, tmp_path: Path) -> None:
