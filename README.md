@@ -77,7 +77,7 @@ The unit suite is offline and uses injected or tiny models. A separate local CPU
 
 ## Release status
 
-**Candidate.** Source validation, offline tests, a local CPU pre-flight and hosted Colab T4 runs of the current blob `25c97147` (main `cb6430b`, safetensors adapter) are recorded: the default path and the `RUN_ACTIVITY = True` activity, each 15/15 code cells, one pass, no restart, 0 errors (2026-10-24). Remaining gates: REL12 (hosted BYOD) and REL2 (a browser run of the interactive journeys). The earlier Kaggle Tesla T4 runs of notebook blob `0be7254` completed 16/16 cells only after a dependency-install restart (2 passes), so they are not one-pass `Run all` evidence. Promotion remains a separate evidence-review decision. See `docs/release-verification.md`.
+**Candidate.** Source validation, offline tests and a local CPU pre-flight are recorded for the current blob `4e12345e` (a refused BYOD input shows one `Refused: <file>: <reason>` line, DAT19/DAT20); its hosted Colab T4 runs are pending. The hosted runs of the previous blob `25c97147` (2026-10-24: the default path and the `RUN_ACTIVITY = True` activity, each 15/15 code cells, one pass, no restart, 0 errors) are history (REL14). Remaining gates: REL12 (hosted BYOD) and REL2 (a browser run of the interactive journeys). The earlier Kaggle Tesla T4 runs of notebook blob `0be7254` completed 16/16 cells only after a dependency-install restart (2 passes), so they are not one-pass `Run all` evidence. Promotion remains a separate evidence-review decision. See `docs/release-verification.md`.
 
 ## Licensing
 
