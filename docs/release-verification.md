@@ -1,6 +1,6 @@
 # Release verification
 
-`tutorials/ast_audio_classification_colab.ipynb` is a standalone `E2E` Candidate (`GUIDED`, DIMER Notebook Specification 2.2). The 2026-10-03 revision fixes the 2026-10-02 notebook review ([review](reviews/2026-10-02-notebook-review/ast_audio_classification_colab_Review.md); findings AST-M1–M3, AST-m1–m6). Its main change is that nothing is installed into the notebook kernel any more: a pinned `uv` builds an isolated, hash-locked Python 3.12.12 environment from `tutorials/requirements-colab.lock.txt`, and every stage of `tools/tutorial_stages.py` runs there in its own process. The current blob `25c97147` (main `cb6430b`, the safetensors adapter format 2.0 of PR #11) has hosted Colab T4 runs of the default path and of the `RUN_ACTIVITY = True` activity (2026-10-24, each one pass, no restart, 0 errors); BYOD has no hosted run yet. Candidate remains unchanged until hosted one-pass evidence is recorded and an explicit promotion decision is made.
+`tutorials/ast_audio_classification_colab.ipynb` is a standalone `E2E` Candidate (`GUIDED`, DIMER Notebook Specification 2.2). The 2026-10-03 revision fixes the 2026-10-02 notebook review ([review](reviews/2026-10-02-notebook-review/ast_audio_classification_colab_Review.md); findings AST-M1–M3, AST-m1–m6). Its main change is that nothing is installed into the notebook kernel any more: a pinned `uv` builds an isolated, hash-locked Python 3.12.12 environment from `tutorials/requirements-colab.lock.txt`, and every stage of `tools/tutorial_stages.py` runs there in its own process. The current blob `59ca8be8` (main `7e84421`, after the lock-file upgrades of PRs #15 and #16) passed its default path and a scripted DAT20 refusal on a hosted Colab T4 on 2026-11-02 (REL14 for this blob). Blob `25c97147` (main `cb6430b`, the safetensors adapter format 2.0 of PR #11), the current blob on 2026-10-24, had hosted Colab T4 runs of the default path and of the `RUN_ACTIVITY = True` activity (2026-10-24, each one pass, no restart, 0 errors); BYOD has no hosted run yet. Candidate remains unchanged until hosted one-pass evidence is recorded and an explicit promotion decision is made.
 
 ## Automatic coverage
 
@@ -39,7 +39,52 @@ Before promotion:
 
 ## Recorded executions
 
-### DAT20 refusal-display revision (blob `4e12345e`, 2026-10-26)
+### REL14 hosted runs of blob `59ca8be8` (2026-11-02)
+
+These 2 runs executed main `7e84421f7a54c018928d21c39413cffaba3594bf` (`tutorials/ast_audio_classification_colab.ipynb` blob `59ca8be806e752b71a05c8a35d50fb60636b83b8`) as Colab CLI sequential executions (`colab exec -f`) on fresh Colab Tesla T4 VMs (session `suite-ast-7e84421-39a0`), not a browser `Run all`. The Colab CLI version is not recorded in `exec.log` or `run_summary.json`. The saved notebooks have no execution counts; cell order is taken from `exec.log`. Each `run_summary.json` records the commit and notebook blob above, `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released); the SHA-256 of each executed notebook equals the summary's `executed_sha256`. Local paths in the exec logs are redacted byte-wise to `<local-run-dir>`; the notebooks and summaries carried none.
+
+| Date (UTC) | Commit / notebook blob | Executor | Path exercised | Code cells | Wall time | Outcome |
+|---|---|---|---|---:|---:|---|
+| 2026-11-02 13:57 | `7e84421` / `59ca8be8` | Colab CLI sequential execution, fresh Colab Tesla T4 | default settings, no overrides | 15/15 | 139.2 s | **One pass, no restart, 0 errors**; [retained evidence](verification/2026-11-02-colab-t4/) |
+| 2026-11-02 12:47 | `7e84421` / `59ca8be8` | Colab CLI sequential execution, fresh Colab Tesla T4 | scripted DAT20 refusal: `USE_BYOD` `False` → `True` and `BYOD_WAV_PATH` `''` → `'/etc/hostname'` | 6/6 of the cut copy | 88.1 s | **Refused as designed**: one `Refused:` line, no traceback, earlier cells clean; [retained evidence](verification/2026-11-02-colab-t4/) |
+
+Lines printed by the default run (quoted from the executed notebook):
+
+```text
+{'gpu': 'Tesla T4, 15360 MiB', 'kernel_python': '3.13.16', 'run_directory': '/content/outputs/ast_audio_classification/a1fe96ff8ab2', 'weights': '/content/weights', 'environment': '/tmp/ast_audio_classification_env_a1fe96ff8ab2', 'free_gib': {'weights': 193.1, 'environment': 193.1}}
+{'carried_files': 9, 'verified': True, 'repository': 'kurtvalcorza/ast-audio-classification-pipeline', 'revision': '835e5c1e0d8af7cf6be1805623cd3a51b934bde9', 'generator': 'build_notebook.py/3.0'}
+   1. index 501  score 0.8288  Sine wave
+{'untrained_head_accuracy': 0.0, 'untrained_head_macro_f1': 0.0, 'majority_baseline': "always 'biophony' (fitted on train) -> accuracy 0.3333"}
+Epoch 5/5: train_loss=0.0059  evaluation_accuracy=1.0000  steps=5
+{'adapter': 'ast-audio-adapter-v2.safetensors', 'bytes': 16956, 'sha256': '7e856748c583ca77...', 'contains': 'classifier head only (the frozen backbone is rebuilt from the pinned base revision)'}
+{'clips_compared': 7, 'scores_compared': 21, 'max_abs_score_difference': 0.0, 'predicted_labels_identical': True, 'rtol': 1e-05, 'atol': 1e-06, 'labels': ['geophony', 'biophony', 'anthrophony'], 'reload_verification': 'PASSED'}
+```
+
+**DAT20 refusal record (2026-11-02).** Overrides, set by `--set` on a copy of the blob: `USE_BYOD` `False` → `True` and `BYOD_WAV_PATH` `''` → `'/etc/hostname'` (the run copy differs from the blob in exactly those 2 source lines). The suite cut the run copy right after the refusing cell `ast_audio_classification-20`, dropping 29 cells (9 of them code cells), which reproduces `Run all` stopping at the first error; the cut copy is `run_copy.ipynb`, SHA-256 `98b1ec96566dc80ca153ea30741bef03acecf6e8c50b2f9291f01db73fd2165d` (Git blob `e41447f5`), equal to the summary's `run_copy_sha256`. The 5 earlier code cells completed without an error. The refusing cell halted with `ename` `Refused` and printed exactly one `Refused:` line, with no traceback:
+
+```text
+Refused: hostname: not a readable PCM WAV (file does not start with RIFF id); export it as 16-bit PCM WAV. Export it as a 16-bit PCM WAV of at most 120 s and run the Section 5 cell again.
+```
+
+This run says nothing about the 29 cut cells, which did not run in it.
+
+| File (under `docs/verification/2026-11-02-colab-t4/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `ast_audio_classification_colab_7e84421_colab-cli-t4_default.ipynb` | `0e2b81ef5e08149c29a8a8ff376a811db669c2a343de766043a0eea47b016846` | `0e2b81ef5e08149c29a8a8ff376a811db669c2a343de766043a0eea47b016846` (unchanged, no local path) |
+| `ast_audio_classification_colab_7e84421_colab-cli-t4_default_exec.log` | `c001d028e99d1fa9c8c9ccd5c2f773a97a8a757655d4ab4f3b72dfdbd8335cdd` | `4e23a5bc213be5401621f2878e07da478d6f2e117f2f02bde4e9721f2ff5f67b` (2 local-path replacements) |
+| `ast_audio_classification_colab_7e84421_colab-cli-t4_default_run_summary.json` | `e09e291f6e71be4d197900cd5ddfdc0114c8cf1142901bb62dc5a2f51872b9d3` | `e09e291f6e71be4d197900cd5ddfdc0114c8cf1142901bb62dc5a2f51872b9d3` (unchanged, no local path) |
+
+| File (under `docs/verification/2026-11-02-colab-t4/`) | Captured SHA-256 | Committed SHA-256 |
+|---|---|---|
+| `ast_audio_classification_colab_7e84421_colab-cli-t4_refusal.ipynb` | `6b2c109e61ff77311f71a502376dee5b21ac98ad2fd6e3af98cde3a04ea63633` | `6b2c109e61ff77311f71a502376dee5b21ac98ad2fd6e3af98cde3a04ea63633` (unchanged, no local path) |
+| `ast_audio_classification_colab_7e84421_colab-cli-t4_refusal_exec.log` | `48b892ad5b975f9fed2ced48764fcaf9da9f1e23c577fe1f231129bede41ccef` | `caecd44a4fa265c21453d14a043420f0e2e9ada6f65cad7c7ce1facff23fd0ca` (2 local-path replacements) |
+| `ast_audio_classification_colab_7e84421_colab-cli-t4_refusal_run_summary.json` | `17fb9f5e5df8912a16aeec49e6f35bf72bbd6b3a5a69a0b75d19610b5e378f87` | `17fb9f5e5df8912a16aeec49e6f35bf72bbd6b3a5a69a0b75d19610b5e378f87` (unchanged, no local path) |
+| `ast_audio_classification_colab_7e84421_colab-cli-t4_refusal_run_copy.ipynb` | `98b1ec96566dc80ca153ea30741bef03acecf6e8c50b2f9291f01db73fd2165d` | `98b1ec96566dc80ca153ea30741bef03acecf6e8c50b2f9291f01db73fd2165d` (unchanged, no local path) |
+
+Not exercised by these runs: an accepted BYOD input and the interactive browser journeys (forms, uploads); every other open gate under Current status is unchanged.
+
+
+### DAT20 refusal-display revision (blob `4e12345e`, 2026-10-26; history, REL14)
 
 Both runs executed the PR head `4112748ed6b5ad2ea09c23eb721022f10855e482`, notebook blob `4e12345e056076aac0f99aa5f8a2c643f3bdbb58` (code commit `5c47a67`), as Colab CLI sequential executions (`colab exec -f`) on fresh Tesla T4 VMs (session `suite-ast-4112748-39a0`), not a browser `Run all`; the saved notebooks have no execution counts and cell order is taken from `exec.log`. The committed blob was fetched at the 40-character SHA and Git-blob verified. Each `run_summary.json` records `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true and `stop_verified` true (the VM was released); the SHA-256 of each executed notebook equals the summary's `executed_sha256`. Local paths in the exec logs are redacted byte-wise to `<local-run-dir>`; the notebooks and summaries carried none.
 
@@ -154,7 +199,7 @@ The historical run used PyTorch `2.14.0+cu130`, verified every snapshot digest, 
 
 ## Current status
 
-**Candidate.** The current E2E blob is `4e12345e056076aac0f99aa5f8a2c643f3bdbb58` (code commit `5c47a67`): a BYOD input the notebook refuses now shows one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results, and stops Run all at that cell (NOTEBOOK_SPEC 3.0 DAT19/DAT20); genuine failures still raise with their traceback. On 2026-10-26 this blob's default path (15/15 code cells, one pass, no restart, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_WAV_PATH=/etc/hostname`: exactly one `Refused:` line at cell `ast_audio_classification-20`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI sequential execution, not a browser `Run all`; record above). Earlier blobs' runs are history (REL14): the previous blob `25c97147bfb0cbe6519dabcdbc660a0f52c0dab5` (main `cb6430b`; safetensors adapter format 2.0) had hosted Colab T4 runs of 2026-10-24 covering the default path and the `RUN_ACTIVITY = True` activity, each 15/15 code cells in one pass with no restart and 0 errors (Colab CLI sequential execution, not a browser `Run all`; run at PR #11's head `23c10b3`, whose blob main carries byte for byte). The workshop's current blob `87dd973d` has a default-path run from the same day (below). The remaining gates are **REL12** (a hosted BYOD run in which a representative input is accepted through the downstream stages) and **REL2** (a browser run of the interactive journeys: forms, BYOD upload, activity toggle). The 2026-10-03 run of blob `2f69419` and the Kaggle runs of blob `0be7254` are history (REL14). Promotion is a separate, explicit decision.
+**Candidate.** The current E2E blob is `59ca8be806e752b71a05c8a35d50fb60636b83b8` (main `7e84421`: the lock-file upgrades of PRs #15 and #16, pillow 13 among them). On 2026-11-02 this blob's default path (15/15 code cells, one pass, no restart, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_WAV_PATH=/etc/hostname`: exactly one `Refused:` line at cell `ast_audio_classification-20`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI sequential execution, not a browser `Run all`; record above), REL14 for this blob. Blob `4e12345e056076aac0f99aa5f8a2c643f3bdbb58` (code commit `5c47a67`) was the current blob on 2026-10-26: a BYOD input the notebook refuses now shows one `Refused: <file>: <reason>` line with no traceback, removes the earlier run's results, and stops Run all at that cell (NOTEBOOK_SPEC 3.0 DAT19/DAT20); genuine failures still raise with their traceback. On 2026-10-26 that blob's default path (15/15 code cells, one pass, no restart, 0 errors) and its scripted DAT20 refusal (`USE_BYOD=True;BYOD_WAV_PATH=/etc/hostname`: exactly one `Refused:` line at cell `ast_audio_classification-20`, no traceback, earlier cells clean, VM released) both passed on a hosted Colab Tesla T4 (Colab CLI sequential execution, not a browser `Run all`; record above); those runs are history (REL14). Earlier blobs' runs are history (REL14) too: the blob before it, `25c97147bfb0cbe6519dabcdbc660a0f52c0dab5` (main `cb6430b`; safetensors adapter format 2.0) had hosted Colab T4 runs of 2026-10-24 covering the default path and the `RUN_ACTIVITY = True` activity, each 15/15 code cells in one pass with no restart and 0 errors (Colab CLI sequential execution, not a browser `Run all`; run at PR #11's head `23c10b3`, whose blob main carries byte for byte). The workshop's blob `87dd973d`, current on 2026-10-24, had a default-path run that day (below); that run is history (REL14). The workshop's current blob `369cb067` (`tutorials/DIMER_Sound_Event_Classification_Workshop.ipynb` at main `7e84421`, changed by the lock upgrades `0ea1e3d` and `e7e9a52`) has **no hosted run yet**, so the workshop's run gate is open for it. The remaining gates are **REL12** (a hosted BYOD run in which a representative input is accepted through the downstream stages), **REL2** (a browser run of the interactive journeys: forms, BYOD upload, activity toggle) and a hosted run of the workshop's current blob `369cb067`. The 2026-10-03 run of blob `2f69419` and the Kaggle runs of blob `0be7254` are history (REL14). Promotion is a separate, explicit decision.
 
 ## Sound-event classification workshop notebook
 
@@ -222,7 +267,7 @@ The figures were not compared byte for byte, since the CX follow-up fixed their 
 
 ### Hosted Colab T4 run of the safetensors revision (2026-10-24)
 
-These runs executed at PR #11's head `23c10b3`, before #11 merged. Main at `cb6430b` (the merge of #11) has byte-identical notebook blobs (`25c97147` and `87dd973d`), so they are valid for main. This is the workshop's current blob `87dd973d9f9ef7625368bd479acad36fb795026f` (the PR #11 regeneration: the selected head is now stored as `selected_head.safetensors`). The run summary records `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true, 11/11 code cells in the exec log and no overrides; the executed notebook's SHA-256 equals its `executed_sha256`.
+These runs executed at PR #11's head `23c10b3`, before #11 merged. Main at `cb6430b` (the merge of #11) has byte-identical notebook blobs (`25c97147` and `87dd973d`), so they are valid for main. This was the workshop's current blob on 2026-10-24, `87dd973d9f9ef7625368bd479acad36fb795026f` (history, REL14: the workshop's current blob at main `7e84421` is `369cb067`, which has no hosted run yet; the PR #11 regeneration: the selected head is now stored as `selected_head.safetensors`). The run summary records `verdict` `PASS`, `exec_exit_code` 0, `input_unchanged` true, 11/11 code cells in the exec log and no overrides; the executed notebook's SHA-256 equals its `executed_sha256`.
 
 | File (under `docs/execution-evidence/2026-10-24/`) | Captured SHA-256 | Committed SHA-256 |
 |---|---|---|
